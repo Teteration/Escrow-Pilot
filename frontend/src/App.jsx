@@ -3,7 +3,8 @@ import { ethers } from 'ethers';
 import EscrowOracleJSON from './contracts/EscrowOracle.json';
 import './App.css';
 
-const CONTRACT_ADDRESS = "0x8aE9F14Ad7C8Fe132eFB3eBFdb028b1C733CE192";
+import contractAddressData from './contracts/contract-address.json';
+const CONTRACT_ADDRESS = contractAddressData.EscrowOracle;
 
 function App() {
   const [account, setAccount] = useState(null);
