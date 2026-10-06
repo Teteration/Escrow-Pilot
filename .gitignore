@@ -1,0 +1,34 @@
+# 1. Secrets & Environment Variables (بسیار محرمانه)
+.env
+.env.local
+.env.*
+!.env.example
+
+# 2. Dependencies (فایل‌های سنگین کتابخانه‌ها)
+node_modules/
+.pnp
+.pnp.js
+
+# 3. Hardhat Compiled Files (خروجی‌های کامپایل قرارداد)
+artifacts/
+cache/
+typechain/
+typechain-types/
+coverage/
+coverage.json
+
+# 4. Frontend Build Files (خروجی‌های بیلد رابط کاربری)
+dist/
+build/
+out/
+
+# 5. Logs & Debugs (فایل‌های لاگ)
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 6. OS Generated Files (فایل‌های سیستمی)
+.DS_Store
+Thumbs.db
