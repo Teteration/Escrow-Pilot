@@ -28,7 +28,7 @@ contract EscrowOracle is ChainlinkClient, ConfirmedOwner {
     uint256 public milestoneCount;
 
     event OracleRequestSent(bytes32 indexed requestId, uint256 milestoneId);
-    event OracleFulfillment(bytes32 indexed requestId, uint256 result); // تغییر به عدد
+    event OracleFulfillment(bytes32 indexed requestId, uint256 result);
     event FundsReleased(uint256 milestoneId, uint256 amount);
     event MilestoneCreated(uint256 id, uint256 amount);
 
@@ -39,12 +39,10 @@ contract EscrowOracle is ChainlinkClient, ConfirmedOwner {
         setChainlinkToken(0x779877A7B0D9E8603169DdbD7836e478b4624789);
         setChainlinkOracle(0x6090149792dAAeE9D1D568c9f9a6F6B46AA29eFD);
         
-        // شناسه مخصوص اعداد
         jobId = "ca98366cc7314957b8c012c72f05aeeb";
         fee = (1 * LINK_DIVISIBILITY) / 10;
     }
 
-    // تغییر مهم: اضافه شدن payable برای قفل کردن اتوماتیک وجه
     function createMilestone(uint256 _amount) external payable {
         require(msg.sender == employer, "Only employer can create milestones");
         require(msg.value == _amount, "Please send exact ETH amount");
@@ -61,15 +59,16 @@ contract EscrowOracle is ChainlinkClient, ConfirmedOwner {
         emit MilestoneCreated(milestoneCount, _amount);
     }
 
-    function requestMilestoneStatus(uint256 _milestoneId, string memory apiUrl) public returns (bytes32) {
+    // اضافه شدن پارامتر dataPath برای داینامیک شدن مسیر JSON
+    function requestMilestoneStatus(uint256 _milestoneId, string memory apiUrl, string memory dataPath) public returns (bytes32) {
         Milestone storage m = milestones[_milestoneId];
         require(!m.arbiterApproved, "Arbiter already approved");
         require(!m.isCompleted, "Milestone already completed");
 
         Chainlink.Request memory req = buildChainlinkRequest(jobId, address(this), this.fulfill.selector);
         req.add("get", apiUrl);
-        req.add("path", "status"); // مسیر ساده شد
-        req.addInt("times", 1); // <--- این خط ناجی ماست!
+        req.add("path", dataPath); 
+        req.addInt("times", 1); 
 
         bytes32 requestId = sendChainlinkRequest(req, fee);
         requestToMilestone[requestId] = _milestoneId;
@@ -78,11 +77,11 @@ contract EscrowOracle is ChainlinkClient, ConfirmedOwner {
         return requestId;
     }
 
-    // دریافت پاسخ به صورت عدد (uint256)
     function fulfill(bytes32 _requestId, uint256 _apiResult) public recordChainlinkFulfillment(_requestId) {
         emit OracleFulfillment(_requestId, _apiResult);
         
-        if (_apiResult == 1) { // 1 به معنای تایید است
+        // هر عددی بزرگتر از صفر یعنی دریافت موفقیت‌آمیز دیتا از دنیای واقعی
+        if (_apiResult > 0) { 
             uint256 mId = requestToMilestone[_requestId];
             Milestone storage m = milestones[mId];
             

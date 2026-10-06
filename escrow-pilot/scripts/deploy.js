@@ -8,8 +8,8 @@ const __dirname = path.dirname(__filename);
 
 async function main() {
   // ۱. آدرس‌های مورد نیاز
-  const contractorAddress = "0x96Dc5330E5695D1801CFc84E172aFC45cF96cb85"; // آدرس پیمانکار
-  const linkTokenAddress = "0x779877A7B0D9E8603169DdbD7836e478b4624789"; // آدرس توکن LINK در Sepolia
+  const contractorAddress = "0x96Dc5330E5695D1801CFc84E172aFC45cF96cb85"; 
+  const linkTokenAddress = "0x779877A7B0D9E8603169DdbD7836e478b4624789"; 
 
   console.log("🚀 Starting deployment...");
   
@@ -24,47 +24,48 @@ async function main() {
   console.log("🎉 EscrowOracle Deployed Successfully!");
   console.log("📍 Contract Address:", contractAddress);
 
-  // === بخش جدید: شارژ خودکار قرارداد با توکن LINK ===
+  // ۳. شارژ خودکار قرارداد با توکن LINK
   console.log("⏳ Funding contract with 1 LINK...");
-  
   try {
-    // دریافت اطلاعات حساب دیپلوی‌کننده
     const [deployer] = await hre.ethers.getSigners();
-    
-    // تعریف حداقل رابط کاربری (ABI) برای انتقال توکن‌های ERC20
     const erc20Abi = [
       "function transfer(address to, uint256 amount) returns (bool)"
     ];
-    
-    // اتصال به قرارداد اصلی توکن LINK
     const linkToken = new hre.ethers.Contract(linkTokenAddress, erc20Abi, deployer);
-    
-    // تنظیم مقدار (1 LINK با ۱۸ صفر اعشار)
     const fundAmount = hre.ethers.parseUnits("1", 18); 
     
-    // ارسال تراکنش
     const tx = await linkToken.transfer(contractAddress, fundAmount);
     await tx.wait();
-    
     console.log("✅ Successfully funded the contract with 1 LINK!");
   } catch (error) {
     console.error("❌ Failed to fund LINK. آیا مطمئنید اکانت اصلی شما توکن LINK دارد؟");
-    console.error(error.message);
   }
 
-  // === بخش ذخیره خودکار آدرس در فرانت‌اند ===
+  // === ۴. همگام‌سازی کامل با فرانت‌اند (Address + ABI) ===
   const contractsDir = path.join(__dirname, "..", "..", "frontend", "src", "contracts");
+  
+  // مسیر فایل کامپایل‌شده ABI در هاردت
+  const artifactPath = path.join(__dirname, "..", "artifacts", "contracts", "EscrowOracle.sol", "EscrowOracle.json");
 
   if (!fs.existsSync(contractsDir)) {
     fs.mkdirSync(contractsDir, { recursive: true });
   }
 
+  // به‌روزرسانی آدرس
   fs.writeFileSync(
     path.join(contractsDir, "contract-address.json"),
     JSON.stringify({ EscrowOracle: contractAddress }, undefined, 2)
   );
-
   console.log("📂 File 'contract-address.json' updated dynamically in frontend!");
+
+  // کپی خودکار فایل ABI به فرانت‌اند
+  if (fs.existsSync(artifactPath)) {
+    fs.copyFileSync(artifactPath, path.join(contractsDir, "EscrowOracle.json"));
+    console.log("⚙️  File 'EscrowOracle.json' (ABI) auto-copied to frontend!");
+  } else {
+    console.error("⚠️ ABI Artifact not found! پروژه باید حتماً کامپایل شده باشد.");
+  }
+  
   console.log("-----------------------------------------");
 }
 

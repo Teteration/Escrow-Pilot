@@ -90,19 +90,22 @@ function App() {
   const callOracle = async (id) => {
     try {
       setLoading(true);
-      const apiUrl = "https://api.npoint.io/ebb606af8e3a3c8dedb8"; 
-      const tx = await contract.requestMilestoneStatus(id, apiUrl);
+      // استفاده از API عمومی و قدرتمند CoinGecko برای اطمینان از عدم مسدودی
+      const apiUrl = "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"; 
+      const apiPath = "ethereum,usd"; 
+
+      // ارسال همزمان URL و Path به قرارداد
+      const tx = await contract.requestMilestoneStatus(id, apiUrl, apiPath);
       await tx.wait();
       alert("درخواست به اوراکل ارسال شد! تایید نهایی ممکن است ۱-۲ دقیقه زمان ببرد.");
       fetchMilestones(); 
     } catch (error) {
-      alert("خطا! آیا قرارداد را با توکن LINK شارژ کرده‌اید؟");
+      alert("خطا در ارتباط با اوراکل رخ داد.");
     } finally {
       setLoading(false);
     }
   };
 
-  // کوتاه کردن آدرس کیف پول برای نمایش زیباتر
   const formatAddress = (addr) => `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
 
   return (
@@ -154,8 +157,18 @@ function App() {
                   <tr>
                     <th>شناسه</th>
                     <th>بودجه (ETH)</th>
-                    <th>کارفرما</th>
-                    <th>اوراکل</th>
+                    <th>
+                      <div className="tooltip-container">
+                        تایید کارفرما
+                        <span className="tooltip-text">کارفرما (شما) پس از تحویل خروجی توسط پیمانکار، باید این تاییدیه را صادر کند تا یک امضا ثبت شود.</span>
+                      </div>
+                    </th>
+                    <th>
+                      <div className="tooltip-container">
+                        تایید اوراکل
+                        <span className="tooltip-text">اوراکل یک ناظر هوشمند (Chainlink) است که با بررسی یک منبع خارجی بی‌طرف (API) تایید دوم را به صورت خودکار صادر می‌کند.</span>
+                      </div>
+                    </th>
                     <th>امضاها</th>
                     <th>وضعیت</th>
                     <th>عملیات</th>

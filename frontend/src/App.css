@@ -277,3 +277,51 @@ button:disabled {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* Tooltip Styles */
+.tooltip-container {
+  position: relative;
+  display: inline-block;
+  cursor: help;
+  border-bottom: 1px dashed var(--text-muted);
+}
+
+.tooltip-container .tooltip-text {
+  visibility: hidden;
+  width: 240px;
+  background-color: var(--card-bg);
+  color: var(--text-main);
+  text-align: right;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px;
+  position: absolute;
+  z-index: 10;
+  bottom: 140%;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.3s ease, bottom 0.3s ease;
+  font-size: 12px;
+  font-weight: normal;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+  line-height: 1.6;
+}
+
+/* فلش پایین Tooltip */
+.tooltip-container .tooltip-text::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -6px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: var(--border-color) transparent transparent transparent;
+}
+
+.tooltip-container:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+  bottom: 125%;
+}
