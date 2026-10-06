@@ -1,248 +1,266 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
-import EscrowOracleJSON from './contracts/EscrowOracle.json';
-import contractAddressData from './contracts/contract-address.json';
-import './App.css';
-
-const CONTRACT_ADDRESS = contractAddressData.EscrowOracle;
+import FactoryJSON from './contracts/EscrowFactory.json';
+import EscrowJSON from './contracts/TrustEscrow.json';
+import AddressJSON from './contracts/contract-address.json';
+import './App.css'; 
 
 function App() {
   const [account, setAccount] = useState(null);
-  const [contract, setContract] = useState(null);
-  const [amount, setAmount] = useState("");
+  const [factoryContract, setFactoryContract] = useState(null);
+  const [escrows, setEscrows] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [milestones, setMilestones] = useState([]);
+  const [formError, setFormError] = useState(''); // مدیریت خطای فرم بدون پاپ‌آپ
 
-const connectWallet = async () => {
+  const [newContractor, setNewContractor] = useState('');
+  const [newArbiter, setNewArbiter] = useState('');
+  const [newBudget, setNewBudget] = useState('');
+  const [isOracleMode, setIsOracleMode] = useState(false);
+
+  const connectWallet = async () => {
     if (window.ethereum) {
       try {
         await window.ethereum.request({ method: 'eth_requestAccounts' });
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0xaa36a7' }], 
+        });
+
         const provider = new ethers.BrowserProvider(window.ethereum);
         const signer = await provider.getSigner();
         const address = await signer.getAddress();
         
-        // ========= بخش دیباگ =========
-        const network = await provider.getNetwork();
-        console.log("1. Network Chain ID:", network.chainId.toString());
-        console.log("2. Target Address:", CONTRACT_ADDRESS);
+        const factory = new ethers.Contract(AddressJSON.EscrowFactory, FactoryJSON.abi, signer);
         
-        const code = await provider.getCode(CONTRACT_ADDRESS);
-        console.log("3. Bytecode at address:", code);
-        
-        if (code === "0x") {
-            alert("خطای بحرانی: متامسک در این شبکه هیچ قراردادی در این آدرس نمی‌‌بیند!");
-            return; // توقف اجرای کد برای جلوگیری از خطای قرمز
-        }
-        // ============================
-
-        const escrowContract = new ethers.Contract(CONTRACT_ADDRESS, EscrowOracleJSON.abi, signer);
         setAccount(address);
-        setContract(escrowContract);
+        setFactoryContract(factory);
+        fetchEscrows(factory, provider);
       } catch (error) {
-        console.error("خطا در اتصال:", error);
+        console.error("Connection Error:", error);
       }
-    } else {
-      alert("لطفاً افزونه MetaMask را نصب کنید.");
     }
   };
 
-  const fetchMilestones = async () => {
-    if (!contract) return;
+  const fetchEscrows = async (factoryIns, provider) => {
     try {
-      const count = await contract.milestoneCount();
-      let loadedMilestones = [];
-      for (let i = 1; i <= count; i++) {
-        const m = await contract.milestones(i);
-        loadedMilestones.push({
-          id: i,
-          amount: ethers.formatEther(m.amount),
-          isCompleted: m.isCompleted,
-          employerApproved: m.employerApproved,
-          arbiterApproved: m.arbiterApproved,
-          approvalCount: m.approvalCount.toString()
+      const addresses = await factoryIns.getAllEscrows();
+      const allEscrowData = [];
+
+      for (let address of addresses) {
+        const escrowContract = new ethers.Contract(address, EscrowJSON.abi, provider);
+        
+        const employer = await escrowContract.employer();
+        const contractor = await escrowContract.contractor();
+        const arbiter = await escrowContract.arbiter();
+        const budget = await escrowContract.budget();
+        const state = await escrowContract.currentState();
+        const isOracle = await escrowContract.isOracleMode();
+        
+        const empRel = await escrowContract.hasApprovedRelease(employer);
+        const conRel = await escrowContract.hasApprovedRelease(contractor);
+        const arbRel = await escrowContract.hasApprovedRelease(arbiter);
+
+        const empRef = await escrowContract.hasApprovedRefund(employer);
+        const conRef = await escrowContract.hasApprovedRefund(contractor);
+        const arbRef = await escrowContract.hasApprovedRefund(arbiter);
+
+        allEscrowData.push({
+          address, employer, contractor, arbiter,
+          budget: ethers.formatEther(budget),
+          state: Number(state), 
+          isOracle,
+          signatures: { empRel, conRel, arbRel, empRef, conRef, arbRef }
         });
       }
-      setMilestones(loadedMilestones);
+      setEscrows(allEscrowData);
     } catch (error) {
-      console.error("خطا در دریافت فازها:", error);
+      console.error("Fetch Error:", error);
     }
   };
 
-  useEffect(() => {
-    if (contract) fetchMilestones();
-  }, [contract]);
+  const createNewEscrow = async (e) => {
+    e.preventDefault();
+    if (!factoryContract) return;
+    
+    setFormError(''); // پاک کردن خطای قبلی
 
-  const createMilestone = async () => {
-    if (!contract || !amount) return;
+    // بررسی‌های اولیه فرانت‌اند برای تجربه کاربری بهتر
+    if (!isOracleMode && newArbiter.toLowerCase() === account.toLowerCase()) {
+      setFormError('خطا: آدرس ناظر نمی‌تواند با آدرس کارفرما (خود شما) یکسان باشد.');
+      return;
+    }
+
     try {
       setLoading(true);
-      const amountInWei = ethers.parseEther(amount);
-      const tx = await contract.createMilestone(amountInWei, { value: amountInWei });
+      const amountInWei = ethers.parseEther(newBudget.toString());
+      const finalArbiter = isOracleMode ? ethers.ZeroAddress : newArbiter;
+      
+      const tx = await factoryContract.createEscrow(
+        newContractor, finalArbiter, isOracleMode, { value: amountInWei }
+      );
+      
       await tx.wait();
-      setAmount("");
-      fetchMilestones(); 
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      fetchEscrows(factoryContract, provider);
+      
+      setNewContractor(''); setNewArbiter(''); setNewBudget(''); setIsOracleMode(false);
     } catch (error) {
-      alert("خطا! آیا موجودی اتریوم شما کافی است؟");
+      console.error("Create Error:", error);
+      // استخراج پیام خطای قرارداد هوشمند
+      let msg = error.reason || error.message || "خطای ناشناخته در تراکنش";
+      if (msg.includes("Arbiter must be a neutral third party")) {
+        msg = "خطا: ناظر باید یک شخص ثالث و بی‌طرف باشد و نمی‌‌تواند خودتان یا پیمانکار باشید.";
+      }
+      setFormError(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  const approveByEmployer = async (id) => {
+  const handleAction = async (escrowAddress, actionType) => {
     try {
       setLoading(true);
-      const tx = await contract.approveByEmployer(id);
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const escrowContract = new ethers.Contract(escrowAddress, EscrowJSON.abi, signer);
+      
+      let tx = actionType === 'release' 
+        ? await escrowContract.approveRelease() 
+        : await escrowContract.approveRefund();
+      
       await tx.wait();
-      fetchMilestones(); 
+      fetchEscrows(factoryContract, provider);
     } catch (error) {
-      alert("خطا! آیا با آدرس کارفرما متصل هستید؟");
+      console.error("Action Error:", error);
+      alert("شما قبلا رای داده‌اید یا مجاز به این عملیات نیستید.");
     } finally {
       setLoading(false);
     }
   };
 
-  const callOracle = async (id) => {
-    try {
-      setLoading(true);
-      // استفاده از یک API تستی بسیار پایدار که یک عدد صحیح (Integer) برمی‌گرداند
-      const apiUrl = "https://jsonplaceholder.typicode.com/posts/1"; 
-      const apiPath = "id"; // مقدار id در این لینک دقیقا عدد 1 است
+  const formatAddress = (addr) => `${addr.substring(0, 6)}...${addr.substring(38)}`;
 
-      const tx = await contract.requestMilestoneStatus(id, apiUrl, apiPath);
-      await tx.wait();
-      alert("درخواست به اوراکل ارسال شد! تایید نهایی ممکن است ۱-۲ دقیقه زمان ببرد.");
-      fetchMilestones(); 
-    } catch (error) {
-      alert("خطا در ارتباط با اوراکل رخ داد.");
-    } finally {
-      setLoading(false);
-    }
+  // تشخیص هوشمند نقش کاربر متصل به متامسک در هر پروژه
+  const getUserRoleInProject = (m) => {
+    if (!account) return null;
+    const currentAcc = account.toLowerCase();
+    if (m.employer.toLowerCase() === currentAcc) return "کارفرما (Employer)";
+    if (m.contractor.toLowerCase() === currentAcc) return "پیمانکار (Contractor)";
+    if (!m.isOracle && m.arbiter.toLowerCase() === currentAcc) return "ناظر (Arbiter)";
+    return "ناظر/مشاهده‌گر";
   };
 
-  const simulateOracle = async (id) => {
-    try {
-      setLoading(true);
-      const tx = await contract.forceOracleApproval(id);
-      await tx.wait();
-      fetchMilestones(); 
-    } catch (error) {
-      alert("خطا در شبیه‌سازی اوراکل.");
-    } finally {
-      setLoading(false);
-    }
+  const SignaturesDisplay = ({ sigs, type, isOracle }) => {
+    const isRel = type === 'release';
+    return (
+      <div className="signers-box">
+        <span className={`signer-tag ${ (isRel ? sigs.empRel : sigs.empRef) ? 'yes' : 'no' }`}>
+          کارفرما {(isRel ? sigs.empRel : sigs.empRef) ? '✅' : '⏳'}
+        </span>
+        <span className={`signer-tag ${ (isRel ? sigs.conRel : sigs.conRef) ? 'yes' : 'no' }`}>
+          پیمانکار {(isRel ? sigs.conRel : sigs.conRef) ? '✅' : '⏳'}
+        </span>
+        {isOracle ? (
+           <span className="signer-tag oracle">اوراکل API 🤖</span>
+        ) : (
+           <span className={`signer-tag ${ (isRel ? sigs.arbRel : sigs.arbRef) ? 'yes' : 'no' }`}>
+             ناظر {(isRel ? sigs.arbRel : sigs.arbRef) ? '✅' : '⏳'}
+           </span>
+        )}
+      </div>
+    );
   };
-
-  const formatAddress = (addr) => `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
 
   return (
     <div className="app-container">
-      <nav className="navbar">
-        <div className="logo-section">
-          <div className="logo-icon">🔗</div>
-          <h1>Escrow Pilot</h1>
-          <span className="network-badge">Sepolia Testnet</span>
-        </div>
-        {!account ? (
-          <button onClick={connectWallet} className="btn-primary">اتصال کیف پول</button>
+      <header className="top-header">
+        <h2 className="logo">TrustDApp</h2>
+        {account ? (
+          <button className="wallet-btn connected">کیف پول: {formatAddress(account)}</button>
         ) : (
-          <div className="wallet-info">
-            <span className="wallet-address">{formatAddress(account)}</span>
-            <div className="status-dot online"></div>
-          </div>
+          <button className="wallet-btn" onClick={connectWallet}>اتصال متامسک</button>
         )}
-      </nav>
+      </header>
 
       {account && (
-        <main className="dashboard">
-          <section className="card create-card">
-            <h2>تعریف فاز جدید</h2>
-            <p className="subtitle">بودجه پروژه را مشخص کنید تا در قرارداد هوشمند قفل شود.</p>
-            <div className="input-group">
-              <input 
-                type="number" 
-                placeholder="مبلغ (مثلاً 0.01 ETH)" 
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="modern-input"
-              />
-              <button onClick={createMilestone} disabled={loading} className="btn-primary">
-                {loading ? <span className="spinner"></span> : "قفل سرمایه"}
+        <main>
+          <section className="card">
+            <h3 className="card-title">تعریف قرارداد جدید</h3>
+            <form className="escrow-form" onSubmit={createNewEscrow}>
+              <input className="input-field" type="text" placeholder="آدرس کیف پول پیمانکار" 
+                value={newContractor} onChange={e => setNewContractor(e.target.value)} required />
+              
+              <input className="input-field" type="text" 
+                placeholder={isOracleMode ? "توسط شبکه اوراکل مدیریت می‌شود" : "آدرس کیف پول ناظر (Arbiter)"}
+                value={isOracleMode ? "" : newArbiter} 
+                onChange={e => setNewArbiter(e.target.value)} 
+                disabled={isOracleMode} required={!isOracleMode} />
+              
+              <input className="input-field" type="number" step="0.0001" placeholder="بودجه پروژه (ETH)" 
+                value={newBudget} onChange={e => setNewBudget(e.target.value)} required />
+              
+              <label className="checkbox-group">
+                <input type="checkbox" checked={isOracleMode} onChange={e => setIsOracleMode(e.target.checked)} />
+                داوری اتوماتیک (Oracle API) - فیلد ناظر دستی غیرفعال می‌شود
+              </label>
+
+              {formError && (
+                <div style={{ color: '#ef4444', fontSize: '0.85rem', background: 'rgba(239, 68, 68, 0.1)', padding: '10px', borderRadius: '6px', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                  {formError}
+                </div>
+              )}
+              
+              <button className="submit-btn" type="submit" disabled={loading}>
+                {loading ? 'در حال پردازش...' : 'ایجاد قرارداد'}
               </button>
-            </div>
+            </form>
           </section>
 
-          <section className="card table-card">
-            <div className="table-header">
-              <h2>وضعیت پروژه‌ها</h2>
-              <button onClick={fetchMilestones} className="btn-icon" title="بروزرسانی جدول">🔄</button>
-            </div>
-            
-            <div className="table-responsive">
-              <table className="modern-table">
+          <section className="card">
+            <h3 className="card-title">داشبورد پروژه‌ها</h3>
+            <div className="table-wrapper">
+              <table className="escrow-table">
                 <thead>
                   <tr>
-                    <th>شناسه</th>
-                    <th>بودجه (ETH)</th>
-                    <th>
-                      <div className="tooltip-container">
-                        تایید کارفرما
-                        <span className="tooltip-text">کارفرما (شما) پس از تحویل خروجی توسط پیمانکار، باید این تاییدیه را صادر کند تا یک امضا ثبت شود.</span>
-                      </div>
-                    </th>
-                    <th>
-                      <div className="tooltip-container">
-                        تایید اوراکل
-                        <span className="tooltip-text">اوراکل یک ناظر هوشمند (Chainlink) است که با بررسی یک منبع خارجی بی‌طرف (API) تایید دوم را به صورت خودکار صادر می‌کند.</span>
-                      </div>
-                    </th>
-                    <th>امضاها</th>
+                    <th>قرارداد</th>
+                    <th>مبلغ</th>
+                    <th>نقش شما</th>
                     <th>وضعیت</th>
+                    <th>وضعیت تسویه</th>
+                    <th>وضعیت لغو</th>
                     <th>عملیات</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {milestones.length === 0 ? (
-                    <tr><td colSpan="7" className="empty-state">هیچ فازی تعریف نشده است.</td></tr>
-                  ) : milestones.map((m) => (
-                    <tr key={m.id}>
-                      <td>#{m.id}</td>
-                      <td className="font-mono">{m.amount}</td>
+                  {escrows.map((m, i) => (
+                    <tr key={i}>
+                      <td><span className="address-cell" title={m.address}>{formatAddress(m.address)}</span></td>
+                      <td><span className="budget-val">{m.budget} ETH</span></td>
+                      <td><span style={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 'bold' }}>{getUserRoleInProject(m)}</span></td>
                       <td>
-                        <span className={`badge ${m.employerApproved ? 'badge-success' : 'badge-pending'}`}>
-                          {m.employerApproved ? "تایید شده" : "در انتظار"}
-                        </span>
+                        {m.state === 0 && <span className="status-badge status-0">در جریان</span>}
+                        {m.state === 1 && <span className="status-badge status-1">تسویه شده</span>}
+                        {m.state === 2 && <span className="status-badge status-2">لغو شده</span>}
                       </td>
+                      <td><SignaturesDisplay sigs={m.signatures} type="release" isOracle={m.isOracle} /></td>
+                      <td><SignaturesDisplay sigs={m.signatures} type="refund" isOracle={m.isOracle} /></td>
                       <td>
-                        <span className={`badge ${m.arbiterApproved ? 'badge-success' : 'badge-pending'}`}>
-                          {m.arbiterApproved ? "تایید شده" : "در انتظار"}
-                        </span>
-                      </td>
-                      <td className="font-mono">{m.approvalCount} / 2</td>
-                      <td>
-                        <span className={`badge ${m.isCompleted ? 'badge-paid' : 'badge-locked'}`}>
-                          {m.isCompleted ? "🔓 تسویه شد" : "🔒 قفل شده"}
-                        </span>
-                      </td>
-                      <td className="actions-cell">
-                        {!m.employerApproved && !m.isCompleted && (
-                          <button onClick={() => approveByEmployer(m.id)} disabled={loading} className="btn-action btn-approve">
-                            تایید کارفرما
-                          </button>
-                        )}
-                        {m.employerApproved && !m.arbiterApproved && !m.isCompleted && (
-                          <button onClick={() => callOracle(m.id)} disabled={loading} className="btn-action btn-oracle">
-                            فراخوانی اوراکل
-                          </button>
-                        )}
-                        {m.employerApproved && !m.arbiterApproved && !m.isCompleted && (
-                          <button onClick={() => simulateOracle(m.id)} disabled={loading} className="btn-action" style={{background: '#8b5cf6', color: 'white', marginLeft: '8px'}}>
-                            بای‌پس تستی اوراکل
-                          </button>
-                        )}
-                        {m.isCompleted && <span className="text-muted">—</span>}
+                        <div className="action-btns">
+                          {m.state === 0 && (
+                            <>
+                              <button className="btn-action btn-release" onClick={() => handleAction(m.address, 'release')} disabled={loading}>تسویه</button>
+                              <button className="btn-action btn-refund" onClick={() => handleAction(m.address, 'refund')} disabled={loading}>لغو</button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
+                  {escrows.length === 0 && (
+                    <tr>
+                      <td colSpan="7" style={{ padding: '2rem', color: '#94a3b8' }}>هیچ پروژه‌ای یافت نشد.</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

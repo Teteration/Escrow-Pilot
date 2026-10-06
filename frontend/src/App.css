@@ -1,327 +1,102 @@
-@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap');
 
 :root {
-  --bg-dark: #0f172a;
-  --card-bg: #1e293b;
-  --border-color: #334155;
+  --bg-main: #0f172a;
+  --bg-card: #1e293b;
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
-  --primary-blue: #3b82f6;
-  --primary-hover: #2563eb;
-  --success-green: #10b981;
-  --warning-yellow: #f59e0b;
-  --danger-red: #ef4444;
-}
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+  --border-color: #334155;
+  --accent-blue: #3b82f6;
+  --accent-green: #10b981;
+  --accent-red: #ef4444;
 }
 
 body {
-  font-family: 'Vazirmatn', Tahoma, sans-serif;
-  background-color: var(--bg-dark);
+  margin: 0;
+  background-color: var(--bg-main);
   color: var(--text-main);
+  font-family: 'Vazirmatn', Tahoma, sans-serif;
   direction: rtl;
-  min-height: 100vh;
 }
 
 .app-container {
-  max-width: 1200px;
+  max-width: 1300px;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 1rem 2rem;
 }
 
-/* Navbar */
-.navbar {
+.top-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 24px 0;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
   border-bottom: 1px solid var(--border-color);
-  margin-bottom: 40px;
 }
 
-.logo-section {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
+.logo { font-size: 1.5rem; font-weight: 700; color: var(--accent-blue); margin: 0; }
 
-.logo-icon {
-  font-size: 24px;
+.wallet-btn {
+  background-color: var(--accent-blue); color: white; border: none;
+  padding: 0.5rem 1rem; border-radius: 0.5rem; font-family: inherit; font-size: 0.9rem; cursor: pointer;
 }
-
-.navbar h1 {
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: 1px;
-}
-
-.network-badge {
-  background: rgba(59, 130, 246, 0.1);
-  color: var(--primary-blue);
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-  border: 1px solid rgba(59, 130, 246, 0.2);
-}
-
-.wallet-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--card-bg);
-  padding: 8px 16px;
-  border-radius: 30px;
-  border: 1px solid var(--border-color);
-}
-
-.wallet-address {
-  font-family: monospace;
-  font-size: 14px;
-  color: var(--text-muted);
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-.status-dot.online {
-  background-color: var(--success-green);
-  box-shadow: 0 0 8px var(--success-green);
-}
-
-/* Buttons */
-button {
-  font-family: inherit;
-  cursor: pointer;
-  border: none;
-  outline: none;
-  transition: all 0.2s ease;
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-primary {
-  background: var(--primary-blue);
-  color: white;
-  padding: 10px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: var(--primary-hover);
-  transform: translateY(-1px);
-}
-
-/* Dashboard Cards */
-.dashboard {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
+.wallet-btn.connected { background: transparent; border: 1px solid var(--border-color); cursor: default; }
 
 .card {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  background-color: var(--bg-card); border: 1px solid var(--border-color);
+  border-radius: 0.75rem; padding: 1.5rem; margin-bottom: 1.5rem;
 }
 
-.card h2 {
-  font-size: 18px;
-  margin-bottom: 8px;
+.card-title { margin-top: 0; margin-bottom: 1rem; font-size: 1.1rem; }
+
+.escrow-form { display: grid; gap: 0.85rem; max-width: 500px; }
+
+.input-field {
+  width: 100%; background-color: var(--bg-main); border: 1px solid var(--border-color);
+  color: var(--text-main); padding: 0.75rem; border-radius: 0.5rem; font-family: monospace;
+  font-size: 0.85rem; box-sizing: border-box; direction: ltr; text-align: left;
 }
+.input-field:disabled { opacity: 0.5; background-color: #0f172a80; cursor: not-allowed; }
+.input-field::placeholder { font-family: 'Vazirmatn'; text-align: right; color: var(--text-muted); }
 
-.subtitle {
-  color: var(--text-muted);
-  font-size: 14px;
-  margin-bottom: 20px;
+.checkbox-group { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer; }
+
+.submit-btn {
+  background-color: var(--accent-green); color: white; border: none; padding: 0.75rem;
+  border-radius: 0.5rem; font-family: inherit; font-weight: bold; cursor: pointer; margin-top: 0.5rem;
 }
+.submit-btn:disabled { opacity: 0.6; cursor: wait; }
 
-/* Input Section */
-.input-group {
-  display: flex;
-  gap: 12px;
-  max-width: 400px;
+.table-wrapper { overflow-x: auto; border-radius: 0.5rem; border: 1px solid var(--border-color); }
+
+.escrow-table { width: 100%; border-collapse: collapse; text-align: center; font-size: 0.85rem; }
+.escrow-table th { background-color: rgba(0,0,0,0.2); color: var(--text-muted); padding: 0.75rem; border-bottom: 1px solid var(--border-color); }
+.escrow-table td { padding: 0.75rem; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+.escrow-table tr:hover td { background-color: rgba(255,255,255,0.02); }
+
+.address-cell { font-family: monospace; color: var(--text-muted); direction: ltr; display: inline-block; }
+.budget-val { font-weight: bold; color: #fff; direction: ltr; }
+
+/* Status & Signatures */
+.status-badge { padding: 0.25rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; }
+.status-0 { background: rgba(245,158,11,0.15); color: #fbbf24; }
+.status-1 { background: rgba(16,185,129,0.15); color: #34d399; }
+.status-2 { background: rgba(239,68,68,0.15); color: #f87171; }
+
+.signers-box { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+.signer-tag {
+  font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color);
+  width: 70px; text-align: center; background: var(--bg-main);
 }
+.signer-tag.yes { border-color: var(--accent-green); color: var(--accent-green); }
+.signer-tag.no { color: var(--text-muted); }
+.signer-tag.oracle { border-color: var(--accent-blue); color: var(--accent-blue); }
 
-.modern-input {
-  flex: 1;
-  background: var(--bg-dark);
-  border: 1px solid var(--border-color);
-  color: var(--text-main);
-  padding: 12px 16px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-family: inherit;
-  transition: border-color 0.2s;
-}
-
-.modern-input:focus {
-  border-color: var(--primary-blue);
-  outline: none;
-}
-
-/* Table */
-.table-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.btn-icon {
-  background: transparent;
-  font-size: 20px;
-}
-
-.btn-icon:hover {
-  transform: rotate(180deg);
-}
-
-.table-responsive {
-  overflow-x: auto;
-}
-
-.modern-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: right;
-}
-
-.modern-table th {
-  color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 600;
-  padding: 16px;
-  border-bottom: 2px solid var(--border-color);
-}
-
-.modern-table td {
-  padding: 16px;
-  font-size: 14px;
-  border-bottom: 1px solid var(--border-color);
-  vertical-align: middle;
-}
-
-.modern-table tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.font-mono {
-  font-family: monospace;
-  font-size: 15px;
-}
-
-/* Badges */
-.badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.badge-success { background: rgba(16, 185, 129, 0.15); color: var(--success-green); }
-.badge-pending { background: rgba(245, 158, 11, 0.15); color: var(--warning-yellow); }
-.badge-paid { background: rgba(59, 130, 246, 0.15); color: var(--primary-blue); }
-.badge-locked { background: rgba(239, 68, 68, 0.15); color: var(--danger-red); }
-
-/* Action Buttons */
-.actions-cell {
-  display: flex;
-  gap: 8px;
-}
-
+.action-btns { display: flex; gap: 0.5rem; justify-content: center; }
 .btn-action {
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
+  border: none; padding: 0.4rem 0.75rem; border-radius: 0.4rem; font-family: inherit;
+  font-size: 0.75rem; font-weight: bold; cursor: pointer; color: white;
 }
-
-.btn-approve { background: rgba(16, 185, 129, 0.1); color: var(--success-green); border: 1px solid rgba(16, 185, 129, 0.2); }
-.btn-approve:hover:not(:disabled) { background: var(--success-green); color: white; }
-
-.btn-oracle { background: rgba(59, 130, 246, 0.1); color: var(--primary-blue); border: 1px solid rgba(59, 130, 246, 0.2); }
-.btn-oracle:hover:not(:disabled) { background: var(--primary-blue); color: white; }
-
-.empty-state {
-  text-align: center;
-  color: var(--text-muted);
-  padding: 40px !important;
-}
-
-/* Loading Spinner */
-.spinner {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-radius: 50%;
-  border-top-color: white;
-  animation: spin 1s ease-in-out infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* Tooltip Styles */
-.tooltip-container {
-  position: relative;
-  display: inline-block;
-  cursor: help;
-  border-bottom: 1px dashed var(--text-muted);
-}
-
-.tooltip-container .tooltip-text {
-  visibility: hidden;
-  width: 240px;
-  background-color: var(--card-bg);
-  color: var(--text-main);
-  text-align: right;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 12px;
-  position: absolute;
-  z-index: 10;
-  bottom: 140%;
-  left: 50%;
-  transform: translateX(-50%);
-  opacity: 0;
-  transition: opacity 0.3s ease, bottom 0.3s ease;
-  font-size: 12px;
-  font-weight: normal;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
-  line-height: 1.6;
-}
-
-/* فلش پایین Tooltip */
-.tooltip-container .tooltip-text::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  margin-left: -6px;
-  border-width: 6px;
-  border-style: solid;
-  border-color: var(--border-color) transparent transparent transparent;
-}
-
-.tooltip-container:hover .tooltip-text {
-  visibility: visible;
-  opacity: 1;
-  bottom: 125%;
-}
+.btn-release { background-color: var(--accent-green); }
+.btn-refund { background-color: var(--accent-red); }
+.btn-action:disabled { opacity: 0.5; cursor: wait; }

@@ -1,75 +1,60 @@
 import hre from "hardhat";
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from 'url';
+import { fileURLToPath } from "url";
 
+// Construct __dirname in ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 async function main() {
-  // ۱. آدرس‌های مورد نیاز
-  const contractorAddress = "0x96Dc5330E5695D1801CFc84E172aFC45cF96cb85"; 
-  const linkTokenAddress = "0x779877A7B0D9E8603169DdbD7836e478b4624789"; 
+  console.log("🚀 Deploying EscrowFactory...");
 
-  console.log("🚀 Starting deployment...");
+  // 1. Deploy the Factory contract
+  const Factory = await hre.ethers.getContractFactory("EscrowFactory");
+  const factory = await Factory.deploy();
   
-  // ۲. دیپلوی قرارداد
-  const EscrowOracle = await hre.ethers.getContractFactory("EscrowOracle");
-  const escrow = await EscrowOracle.deploy(contractorAddress);
-  await escrow.waitForDeployment();
-  
-  const contractAddress = escrow.target;
+  await factory.waitForDeployment();
+  const factoryAddress = await factory.getAddress();
 
-  console.log("-----------------------------------------");
-  console.log("🎉 EscrowOracle Deployed Successfully!");
-  console.log("📍 Contract Address:", contractAddress);
+  console.log(`✅ EscrowFactory successfully deployed at: ${factoryAddress}`);
 
-  // ۳. شارژ خودکار قرارداد با توکن LINK
-  console.log("⏳ Funding contract with 1 LINK...");
-  try {
-    const [deployer] = await hre.ethers.getSigners();
-    const erc20Abi = [
-      "function transfer(address to, uint256 amount) returns (bool)"
-    ];
-    const linkToken = new hre.ethers.Contract(linkTokenAddress, erc20Abi, deployer);
-    const fundAmount = hre.ethers.parseUnits("1", 18); 
-    
-    const tx = await linkToken.transfer(contractAddress, fundAmount);
-    await tx.wait();
-    console.log("✅ Successfully funded the contract with 1 LINK!");
-  } catch (error) {
-    console.error("❌ Failed to fund LINK. آیا مطمئنید اکانت اصلی شما توکن LINK دارد؟");
-  }
+  // 2. Extract and save ABI/Address files for the frontend
+  saveFrontendFiles(factoryAddress);
+}
 
-  // === ۴. همگام‌سازی کامل با فرانت‌اند (Address + ABI) ===
+function saveFrontendFiles(factoryAddress) {
+  // Navigating up twice (..) to go from /escrow-pilot/scripts to /blockChainProj/frontend/src/contracts
   const contractsDir = path.join(__dirname, "..", "..", "frontend", "src", "contracts");
-  
-  // مسیر فایل کامپایل‌شده ABI در هاردت
-  const artifactPath = path.join(__dirname, "..", "artifacts", "contracts", "EscrowOracle.sol", "EscrowOracle.json");
 
   if (!fs.existsSync(contractsDir)) {
     fs.mkdirSync(contractsDir, { recursive: true });
   }
 
-  // به‌روزرسانی آدرس
+  // Save the Factory contract address
   fs.writeFileSync(
     path.join(contractsDir, "contract-address.json"),
-    JSON.stringify({ EscrowOracle: contractAddress }, undefined, 2)
+    JSON.stringify({ EscrowFactory: factoryAddress }, undefined, 2)
   );
-  console.log("📂 File 'contract-address.json' updated dynamically in frontend!");
 
-  // کپی خودکار فایل ABI به فرانت‌اند
-  if (fs.existsSync(artifactPath)) {
-    fs.copyFileSync(artifactPath, path.join(contractsDir, "EscrowOracle.json"));
-    console.log("⚙️  File 'EscrowOracle.json' (ABI) auto-copied to frontend!");
-  } else {
-    console.error("⚠️ ABI Artifact not found! پروژه باید حتماً کامپایل شده باشد.");
-  }
-  
-  console.log("-----------------------------------------");
+  // Extract and save the Factory ABI
+  const FactoryArtifact = hre.artifacts.readArtifactSync("EscrowFactory");
+  fs.writeFileSync(
+    path.join(contractsDir, "EscrowFactory.json"),
+    JSON.stringify(FactoryArtifact, null, 2)
+  );
+
+  // Extract and save the TrustEscrow ABI (needed by frontend to interact with spawned contracts)
+  const EscrowArtifact = hre.artifacts.readArtifactSync("TrustEscrow");
+  fs.writeFileSync(
+    path.join(contractsDir, "TrustEscrow.json"),
+    JSON.stringify(EscrowArtifact, null, 2)
+  );
+
+  console.log(`📂 ABI and address files successfully updated in: ${contractsDir}`);
 }
 
 main().catch((error) => {
-  console.error(error);
+  console.error("❌ Deployment failed:", error);
   process.exitCode = 1;
 });
