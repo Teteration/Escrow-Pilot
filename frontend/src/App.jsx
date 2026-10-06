@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import EscrowOracleJSON from './contracts/EscrowOracle.json';
+import contractAddressData from './contracts/contract-address.json';
 import './App.css';
 
-import contractAddressData from './contracts/contract-address.json';
 const CONTRACT_ADDRESS = contractAddressData.EscrowOracle;
 
 function App() {
@@ -21,34 +21,27 @@ function App() {
         const signer = await provider.getSigner();
         const address = await signer.getAddress();
         
-        const escrowContract = new ethers.Contract(
-          CONTRACT_ADDRESS,
-          EscrowOracleJSON.abi,
-          signer
-        );
-
+        const escrowContract = new ethers.Contract(CONTRACT_ADDRESS, EscrowOracleJSON.abi, signer);
         setAccount(address);
         setContract(escrowContract);
       } catch (error) {
-        console.error("خطا در اتصال به کیف پول:", error);
+        console.error("خطا در اتصال:", error);
       }
     } else {
       alert("لطفاً افزونه MetaMask را نصب کنید.");
     }
   };
 
-  // دریافت اطلاعات فازها از قرارداد
   const fetchMilestones = async () => {
     if (!contract) return;
     try {
       const count = await contract.milestoneCount();
       let loadedMilestones = [];
-      
       for (let i = 1; i <= count; i++) {
         const m = await contract.milestones(i);
         loadedMilestones.push({
           id: i,
-          amount: ethers.formatEther(m.amount), // تبدیل Wei به Ether برای نمایش
+          amount: ethers.formatEther(m.amount),
           isCompleted: m.isCompleted,
           employerApproved: m.employerApproved,
           arbiterApproved: m.arbiterApproved,
@@ -61,154 +54,156 @@ function App() {
     }
   };
 
-  // هر بار که قرارداد لود شد، فازها را هم بخوان
   useEffect(() => {
-    if (contract) {
-      fetchMilestones();
-    }
+    if (contract) fetchMilestones();
   }, [contract]);
 
-const createMilestone = async () => {
+  const createMilestone = async () => {
     if (!contract || !amount) return;
     try {
       setLoading(true);
       const amountInWei = ethers.parseEther(amount);
-      
-      // تغییر جدید: ارسال اتریوم به همراه تراکنش
       const tx = await contract.createMilestone(amountInWei, { value: amountInWei });
-      
       await tx.wait();
-      alert("فاز جدید ایجاد و بودجه با موفقیت قفل شد!");
       setAmount("");
       fetchMilestones(); 
     } catch (error) {
-      console.error("خطا در ایجاد فاز:", error);
-      alert("خطا! آیا موجودی اتریوم شما برای این رقم کافی است؟");
+      alert("خطا! آیا موجودی اتریوم شما کافی است؟");
     } finally {
       setLoading(false);
     }
   };
 
-  // تابع تایید کارفرما
   const approveByEmployer = async (id) => {
     try {
       setLoading(true);
       const tx = await contract.approveByEmployer(id);
       await tx.wait();
-      alert("تایید شما در بلاکچین ثبت شد!");
-      fetchMilestones(); // بروزرسانی جدول
+      fetchMilestones(); 
     } catch (error) {
-      console.error("خطا در تایید:", error);
-      alert("خطا! آیا شما با آدرس کارفرما متصل هستید؟");
+      alert("خطا! آیا با آدرس کارفرما متصل هستید؟");
     } finally {
       setLoading(false);
     }
   };
 
-// تابع فراخوانی اوراکل
   const callOracle = async (id) => {
     try {
       setLoading(true);
-      // یک آدرس API تستی که نتیجه true (تایید) برمی‌گرداند
       const apiUrl = "https://api.npoint.io/ebb606af8e3a3c8dedb8"; 
-      
       const tx = await contract.requestMilestoneStatus(id, apiUrl);
       await tx.wait();
       alert("درخواست به اوراکل ارسال شد! تایید نهایی ممکن است ۱-۲ دقیقه زمان ببرد.");
       fetchMilestones(); 
     } catch (error) {
-      console.error("خطا در فراخوانی اوراکل:", error);
       alert("خطا! آیا قرارداد را با توکن LINK شارژ کرده‌اید؟");
     } finally {
       setLoading(false);
     }
   };
 
+  // کوتاه کردن آدرس کیف پول برای نمایش زیباتر
+  const formatAddress = (addr) => `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
+
   return (
-    <div className="App">
-      <h1>سامانه تسویه امانی (Escrow Pilot)</h1>
-      
-      {!account ? (
-        <button onClick={connectWallet} className="connect-btn">
-          اتصال کیف پول
-        </button>
-      ) : (
-        <div className="dashboard">
-          <p className="success-text">✅ کیف پول متصل شد: {account}</p>
-          <hr />
-          
-          <div className="action-card">
-            <h3>تعریف فاز جدید پروژه</h3>
+    <div className="app-container">
+      <nav className="navbar">
+        <div className="logo-section">
+          <div className="logo-icon">🔗</div>
+          <h1>Escrow Pilot</h1>
+          <span className="network-badge">Sepolia Testnet</span>
+        </div>
+        {!account ? (
+          <button onClick={connectWallet} className="btn-primary">اتصال کیف پول</button>
+        ) : (
+          <div className="wallet-info">
+            <span className="wallet-address">{formatAddress(account)}</span>
+            <div className="status-dot online"></div>
+          </div>
+        )}
+      </nav>
+
+      {account && (
+        <main className="dashboard">
+          <section className="card create-card">
+            <h2>تعریف فاز جدید</h2>
+            <p className="subtitle">بودجه پروژه را مشخص کنید تا در قرارداد هوشمند قفل شود.</p>
             <div className="input-group">
               <input 
                 type="number" 
-                placeholder="مبلغ (مثلا 0.01)" 
+                placeholder="مبلغ (مثلاً 0.01 ETH)" 
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                style={{ padding: '8px', marginRight: '10px' }}
+                className="modern-input"
               />
-              <button onClick={createMilestone} disabled={loading} style={{ padding: '8px' }}>
-                {loading ? "در حال پردازش..." : "ثبت در بلاکچین"}
+              <button onClick={createMilestone} disabled={loading} className="btn-primary">
+                {loading ? <span className="spinner"></span> : "قفل سرمایه"}
               </button>
             </div>
-          </div>
+          </section>
 
-          <div className="action-card" style={{ marginTop: '20px' }}>
-            <h3>وضعیت پروژه‌ها (Milestones)</h3>
-            <button onClick={fetchMilestones} style={{ marginBottom: '10px', padding: '5px' }}>🔄 بروزرسانی جدول</button>
+          <section className="card table-card">
+            <div className="table-header">
+              <h2>وضعیت پروژه‌ها</h2>
+              <button onClick={fetchMilestones} className="btn-icon" title="بروزرسانی جدول">🔄</button>
+            </div>
             
-            <table style={{ width: '100%', textAlign: 'center', borderCollapse: 'collapse' }} border="1">
-              <thead>
-                <tr>
-                  <th>شناسه فاز</th>
-                  <th>مبلغ (Sepolia ETH)</th>
-                  <th>تایید کارفرما</th>
-                  <th>تایید اوراکل</th>
-                  <th>تعداد امضا</th>
-                  <th>وضعیت نهایی</th>
-                  <th>عملیات</th>
-                </tr>
-              </thead>
-              <tbody>
-                {milestones.map((m) => (
-                  <tr key={m.id}>
-                    <td>{m.id}</td>
-                    <td>{m.amount}</td>
-                    <td>{m.employerApproved ? "✅ تایید شده" : "❌ منتظر تایید"}</td>
-                    <td>{m.arbiterApproved ? "✅ تایید شده" : "❌ منتظر تایید"}</td>
-                    <td>{m.approvalCount} / 2</td>
-                    <td>{m.isCompleted ? "🎉 پرداخت شد" : "🔒 قفل شده"}</td>
-                    <td>
-                      {!m.employerApproved && !m.isCompleted && (
-                        <button 
-                          onClick={() => approveByEmployer(m.id)}
-                          disabled={loading}
-                          style={{ background: '#4CAF50', color: 'white', cursor: 'pointer' }}
-                        >
-                          تایید به عنوان کارفرما
-                        </button>
-                      )}
-                    </td>
-                    <td>
-                      {!m.employerApproved && !m.isCompleted && (
-                        <button onClick={() => approveByEmployer(m.id)} disabled={loading} style={{ background: '#4CAF50', color: 'white', cursor: 'pointer', marginBottom: '5px' }}>
-                          تایید کارفرما
-                        </button>
-                      )}
-                      {/* دکمه جدید برای اوراکل */}
-                      {m.employerApproved && !m.arbiterApproved && !m.isCompleted && (
-                        <button onClick={() => callOracle(m.id)} disabled={loading} style={{ background: '#2196F3', color: 'white', cursor: 'pointer' }}>
-                          فراخوانی اوراکل (API)
-                        </button>
-                      )}
-                    </td>
+            <div className="table-responsive">
+              <table className="modern-table">
+                <thead>
+                  <tr>
+                    <th>شناسه</th>
+                    <th>بودجه (ETH)</th>
+                    <th>کارفرما</th>
+                    <th>اوراکل</th>
+                    <th>امضاها</th>
+                    <th>وضعیت</th>
+                    <th>عملیات</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          
-        </div>
+                </thead>
+                <tbody>
+                  {milestones.length === 0 ? (
+                    <tr><td colSpan="7" className="empty-state">هیچ فازی تعریف نشده است.</td></tr>
+                  ) : milestones.map((m) => (
+                    <tr key={m.id}>
+                      <td>#{m.id}</td>
+                      <td className="font-mono">{m.amount}</td>
+                      <td>
+                        <span className={`badge ${m.employerApproved ? 'badge-success' : 'badge-pending'}`}>
+                          {m.employerApproved ? "تایید شده" : "در انتظار"}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`badge ${m.arbiterApproved ? 'badge-success' : 'badge-pending'}`}>
+                          {m.arbiterApproved ? "تایید شده" : "در انتظار"}
+                        </span>
+                      </td>
+                      <td className="font-mono">{m.approvalCount} / 2</td>
+                      <td>
+                        <span className={`badge ${m.isCompleted ? 'badge-paid' : 'badge-locked'}`}>
+                          {m.isCompleted ? "🔓 تسویه شد" : "🔒 قفل شده"}
+                        </span>
+                      </td>
+                      <td className="actions-cell">
+                        {!m.employerApproved && !m.isCompleted && (
+                          <button onClick={() => approveByEmployer(m.id)} disabled={loading} className="btn-action btn-approve">
+                            تایید کارفرما
+                          </button>
+                        )}
+                        {m.employerApproved && !m.arbiterApproved && !m.isCompleted && (
+                          <button onClick={() => callOracle(m.id)} disabled={loading} className="btn-action btn-oracle">
+                            فراخوانی اوراکل
+                          </button>
+                        )}
+                        {m.isCompleted && <span className="text-muted">—</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </main>
       )}
     </div>
   );
