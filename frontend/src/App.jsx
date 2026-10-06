@@ -13,7 +13,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [milestones, setMilestones] = useState([]);
 
-  const connectWallet = async () => {
+const connectWallet = async () => {
     if (window.ethereum) {
       try {
         await window.ethereum.request({ method: 'eth_requestAccounts' });
@@ -21,6 +21,20 @@ function App() {
         const signer = await provider.getSigner();
         const address = await signer.getAddress();
         
+        // ========= بخش دیباگ =========
+        const network = await provider.getNetwork();
+        console.log("1. Network Chain ID:", network.chainId.toString());
+        console.log("2. Target Address:", CONTRACT_ADDRESS);
+        
+        const code = await provider.getCode(CONTRACT_ADDRESS);
+        console.log("3. Bytecode at address:", code);
+        
+        if (code === "0x") {
+            alert("خطای بحرانی: متامسک در این شبکه هیچ قراردادی در این آدرس نمی‌‌بیند!");
+            return; // توقف اجرای کد برای جلوگیری از خطای قرمز
+        }
+        // ============================
+
         const escrowContract = new ethers.Contract(CONTRACT_ADDRESS, EscrowOracleJSON.abi, signer);
         setAccount(address);
         setContract(escrowContract);
@@ -90,17 +104,29 @@ function App() {
   const callOracle = async (id) => {
     try {
       setLoading(true);
-      // استفاده از API عمومی و قدرتمند CoinGecko برای اطمینان از عدم مسدودی
-      const apiUrl = "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"; 
-      const apiPath = "ethereum,usd"; 
+      // استفاده از یک API تستی بسیار پایدار که یک عدد صحیح (Integer) برمی‌گرداند
+      const apiUrl = "https://jsonplaceholder.typicode.com/posts/1"; 
+      const apiPath = "id"; // مقدار id در این لینک دقیقا عدد 1 است
 
-      // ارسال همزمان URL و Path به قرارداد
       const tx = await contract.requestMilestoneStatus(id, apiUrl, apiPath);
       await tx.wait();
       alert("درخواست به اوراکل ارسال شد! تایید نهایی ممکن است ۱-۲ دقیقه زمان ببرد.");
       fetchMilestones(); 
     } catch (error) {
       alert("خطا در ارتباط با اوراکل رخ داد.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const simulateOracle = async (id) => {
+    try {
+      setLoading(true);
+      const tx = await contract.forceOracleApproval(id);
+      await tx.wait();
+      fetchMilestones(); 
+    } catch (error) {
+      alert("خطا در شبیه‌سازی اوراکل.");
     } finally {
       setLoading(false);
     }
@@ -206,6 +232,11 @@ function App() {
                         {m.employerApproved && !m.arbiterApproved && !m.isCompleted && (
                           <button onClick={() => callOracle(m.id)} disabled={loading} className="btn-action btn-oracle">
                             فراخوانی اوراکل
+                          </button>
+                        )}
+                        {m.employerApproved && !m.arbiterApproved && !m.isCompleted && (
+                          <button onClick={() => simulateOracle(m.id)} disabled={loading} className="btn-action" style={{background: '#8b5cf6', color: 'white', marginLeft: '8px'}}>
+                            بای‌پس تستی اوراکل
                           </button>
                         )}
                         {m.isCompleted && <span className="text-muted">—</span>}
