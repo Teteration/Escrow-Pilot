@@ -16,7 +16,7 @@ Uses an injected wallet on Sepolia and `src/contracts/contract-address.json`, `E
 
 - Persian/English language selector, browser-local preference persistence, translated interface and application messages, language-aware statistics, and document `lang`/`dir` updates. Switching language does not reset wallet or form state. Provider/RPC error details and blockchain identifiers retain their original values.
 
-- Responsive Persian RTL dark dashboard: side-by-side creation/project workspace on wider screens, stacked sections and labeled project cards on smaller screens.
+- Responsive Persian RTL / English LTR dark dashboard: side-by-side creation/project workspace on wider screens, stacked sections and labeled project cards on smaller screens.
 - Factory-wide totals for contracts, active contracts, completed contracts, and active registered budgets. These are not personal portfolio statistics; budget totals are not live contract balances.
 - Participant details, role/status and approval badges, arbitration mode labels, and Sepolia Etherscan links for the connected account, Factory, escrow, and participants.
 - Connect, select another account, and disconnect controls. Account changes reconnect the application without a page refresh; network changes reset the session and require reconnection on Sepolia.

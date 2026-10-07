@@ -48,7 +48,7 @@ Hardhat tests use an ephemeral local chain. Vite serves locally, but wallet inte
 6. Confirm completion and contractor payout on-chain.
 7. Use another project for two refund votes and employer refund.
 
-Wallet/network changes reset the client connection; reconnect afterwards. This is not a replacement for automated escrow tests.
+Account changes reconnect without a page refresh; network changes reset the session and require reconnection on Sepolia. Account selection and permission revocation depend on the wallet. This is not a replacement for automated escrow tests.
 
 ## Troubleshooting
 

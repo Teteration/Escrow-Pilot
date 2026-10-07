@@ -82,6 +82,7 @@ docs/                 Architecture, setup, deployment, tests, risks, decisions
 
 ## Documentation
 
+- [Project status and continuation on another computer](docs/project-handover.md)
 - [Architecture and state transitions](docs/architecture.md)
 - [Local development](docs/local-development.md)
 - [Deployment and contract exports](docs/deployment.md)

@@ -2,6 +2,11 @@
 
 Prioritized backlog, not release promises.
 
+For the current decisions, validation gaps and cross-computer continuation steps,
+start with the [project handover](project-handover.md). Manual arbitration remains
+the primary demo path; keep the experimental Oracle option visible. CRE deployment
+and further integration are paused pending access/scope decisions.
+
 ## Phase 1: presentation
 
 - [x] Accurate README, architecture, setup, deployment, risks, and token separation.
@@ -13,7 +18,8 @@ Prioritized backlog, not release promises.
 ## Phase 2: evidence
 
 - [ ] Backend compile/test scripts instead of placeholders.
-- [ ] Factory/escrow tests, adversarial cases, Oracle mocks.
+- [x] Focused Oracle voting regressions and test-only LINK/node mocks (20 tests).
+- [ ] Comprehensive Factory/escrow tests and adversarial cases beyond those regressions.
 - [ ] Frontend tests and CI compile/test/lint/build.
 - [ ] Measure coverage; publish only measured results.
 
