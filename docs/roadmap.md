@@ -19,10 +19,17 @@ Prioritized backlog, not release promises.
 
 ## Phase 3: maintainability
 
+- [x] Add Persian/English selection, persistent language preference, and RTL/LTR direction switching.
+
+- [x] Implement responsive RTL workspace and smaller-screen project cards (visual acceptance pending).
+- [x] Add dashboard statistics, participant details, and explorer links.
+- [x] Add disconnect/account-selection controls, session resets, and reduced-motion-aware connection indicator.
+- [x] Expose experimental Oracle API/request/vote controls with funding and availability warnings.
+- [x] Remove inherited fixed-width Vite root styles.
 - [ ] Extract wallet/escrow hooks, services, and components.
 - [ ] User-facing transaction/network errors and resilient async reads.
-- [ ] Listing strategy and accessibility/mobile improvements.
-- [ ] Remove inherited Vite styles with visual checks.
+- [ ] Listing strategy, accessibility review, and desktop/mobile visual acceptance.
+- [ ] Verify real-wallet switching and permission revocation; consider multi-provider discovery.
 
 ## Phase 4: contract review
 

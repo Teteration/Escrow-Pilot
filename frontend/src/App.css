@@ -202,3 +202,11 @@ a:hover { color: #bfdbfe; text-decoration: underline; }
   .escrow-table tr { padding: 8px; }
 }
 @media (prefers-reduced-motion: reduce) { .connection-dot { animation: none; } }
+
+/* Logical alignment follows the selected language without changing addresses. */
+body { direction: inherit; }
+.app-container, .escrow-table th, .escrow-table td, .oracle-panel { text-align: start; }
+.input-field::placeholder { text-align: start; }
+.language-control { display: flex; align-items: center; gap: 8px; margin-inline-start: auto; font-size: 12px; color: var(--text-muted); }
+.language-control select { background: #0d1726; color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 12px; font: inherit; min-height: 40px; }
+.app-container[dir="ltr"] .wallet-btn { font-size: 12px; }

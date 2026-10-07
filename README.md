@@ -1,6 +1,6 @@
 # TrustDApp
 
-**An Ethereum escrow prototype with isolated contracts, on-chain approvals, and a Persian RTL dashboard.**
+**An Ethereum escrow prototype with isolated contracts, on-chain approvals, and a bilingual Persian/English dashboard.**
 
 TrustDApp explores how an employer and a contractor can lock ETH in a dedicated escrow and resolve payment through participant approvals. It combines a Solidity/Hardhat backend with a React/Vite client on Sepolia.
 
@@ -11,8 +11,11 @@ TrustDApp explores how an employer and a contractor can lock ETH in a dedicated 
 - **Factory pattern:** each project gets an isolated `TrustEscrow` instance and ETH balance.
 - **Explicit lifecycle:** funded escrows transition to completed or refunded states.
 - **Role-based approvals:** manual resolution requires two distinct approvals among employer, contractor, and arbiter for the same outcome.
-- **Wallet integration:** Ethers v6 handles connection, Sepolia switching, reads, and transactions.
-- **Persian UI:** a dark RTL dashboard displays roles, signatures, and project status.
+- **Wallet controls:** connect an injected Ethereum wallet, request account selection, disconnect the application, and react to account/network changes. A green animated indicator identifies the connected account; permission support depends on the wallet.
+- **Responsive Persian UI:** a dark RTL workspace places creation and project management side by side on wider screens and uses labeled project cards on smaller screens. Reduced-motion preferences disable the connection animation.
+- **Language selection:** switch between Persian and English without resetting the wallet or forms; selection is saved locally, and document direction and statistics follow the chosen language.
+- **Dashboard visibility:** factory-wide contract counts, active registered budgets, participant details, arbitration modes, approval badges, and Sepolia Etherscan links for accounts, escrows, and the Factory.
+- **Experimental Oracle controls:** HTTPS API URL and JSON field path inputs, request submission, status messages, vote reads where supported, and explicit LINK-cost and service-availability warnings.
 - **Independent token:** `TrustToken` has a fixed 100 million TRUST supply. It is **not** used for escrow, fees, payments, or balance display in this version.
 
 ## Architecture
@@ -36,8 +39,8 @@ flowchart LR
 | Area | Current status |
 | --- | --- |
 | Factory and manual escrow | Implemented; automated escrow tests still needed |
-| Dashboard | Connection, creation, release/refund approvals |
-| Oracle mode | Two-vote logic locally tested; request/status script; live node unverified |
+| Dashboard | Responsive layout, creation/approval controls, wallet switching/disconnect, statistics, participant details, and explorer links; real-wallet/browser acceptance testing pending |
+| Oracle mode | Two-vote logic locally tested; frontend API/request/vote controls and request/status script; successful live fulfillment not verified |
 | TRUST token | Standalone ERC-20; five tests; no DApp integration |
 | CI / frontend tests | Not configured |
 | Hosted demo / screenshots | Not published here yet |
