@@ -17,6 +17,22 @@ function App() {
   const [newBudget, setNewBudget] = useState('');
   const [isOracleMode, setIsOracleMode] = useState(false);
 
+  useEffect(() => {
+    const wallet = window.ethereum;
+    if (!wallet?.on) return;
+    const resetWallet = () => {
+      setAccount(null);
+      setFactoryContract(null);
+      setEscrows([]);
+    };
+    wallet.on('accountsChanged', resetWallet);
+    wallet.on('chainChanged', resetWallet);
+    return () => {
+      wallet.removeListener('accountsChanged', resetWallet);
+      wallet.removeListener('chainChanged', resetWallet);
+    };
+  }, []);
+
   const connectWallet = async () => {
     if (window.ethereum) {
       try {
@@ -176,7 +192,7 @@ function App() {
       <header className="top-header">
         <h2 className="logo">TrustDApp</h2>
         {account ? (
-          <button className="wallet-btn connected">کیف پول: {formatAddress(account)}</button>
+          <span className="wallet-btn connected">کیف پول: <bdi title={account}>{formatAddress(account)}</bdi></span>
         ) : (
           <button className="wallet-btn" onClick={connectWallet}>اتصال متامسک</button>
         )}
