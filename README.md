@@ -84,6 +84,7 @@ docs/                 Architecture, setup, deployment, tests, risks, decisions
 - [Deployment and contract exports](docs/deployment.md)
 - [Tests and validation](docs/testing.md)
 - [Threat model and limitations](docs/threat-model.md)
+- [Sepolia Oracle live-test evidence](docs/oracle-live-test.md)
 - [Roadmap](docs/roadmap.md)
 - [Decision: token separation](docs/decisions/0001-standalone-token.md)
 - [Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md)

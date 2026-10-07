@@ -1,0 +1,4 @@
+{
+  "schedule": "*/30 * * * * *",
+  "apiUrl": "https://api.npoint.io/ebb606af8e3a3c8dedb8"
+}
