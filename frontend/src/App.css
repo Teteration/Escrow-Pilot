@@ -43,6 +43,10 @@ body {
 .wallet-btn.connected { background: transparent; border: 1px solid var(--border-color); cursor: default; }
 
 .top-header { flex-wrap: wrap; gap: 1rem; }
+.wallet-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.wallet-disconnect { background: transparent; border: 1px solid var(--accent-red); color: #f87171; }
+.wallet-btn:disabled { opacity: 0.6; cursor: wait; }
+.wallet-error { color: #f87171; overflow-wrap: anywhere; }
 
 .card {
   background-color: var(--bg-card); border: 1px solid var(--border-color);
@@ -102,3 +106,99 @@ body {
 .btn-release { background-color: var(--accent-green); }
 .btn-refund { background-color: var(--accent-red); }
 .btn-action:disabled { opacity: 0.5; cursor: wait; }
+
+.oracle-panel { padding: 0.75rem; margin-top: 0.75rem; border: 1px solid var(--border-color); border-radius: 0.5rem; text-align: right; }
+.escrow-table .oracle-panel { min-width: 260px; max-width: 360px; }
+.oracle-inputs { display: grid; gap: 0.5rem; font-size: 0.8rem; }
+.oracle-inputs code { display: block; text-align: left; overflow-wrap: anywhere; }
+.oracle-help, .oracle-warning, .oracle-message { font-size: 0.8rem; line-height: 1.8; overflow-wrap: anywhere; }
+.oracle-help { color: var(--text-muted); }
+.oracle-warning { color: #fbbf24; }
+.oracle-message { white-space: pre-wrap; }
+.btn-oracle { background: var(--accent-blue); }
+/* Responsive dashboard */
+body { background: radial-gradient(ellipse at top right, #162b43 0, #0b1220 55%); line-height: 1.7; }
+.app-container { max-width: 1800px; width: 100%; padding: 28px clamp(16px, 3vw, 48px); text-align: right; }
+a { color: #93c5fd; text-decoration: none; }
+a:hover { color: #bfdbfe; text-decoration: underline; }
+.top-header { margin-bottom: 16px; padding-bottom: 20px; }
+.brand { display: grid; gap: 2px; }
+.logo { font-size: 26px; color: #f8fafc; letter-spacing: -0.6px; }
+.brand-subtitle, .section-description { color: var(--text-muted); font-size: 13px; }
+.wallet-controls { gap: 8px; }
+.wallet-btn { min-height: 42px; display: inline-flex; align-items: center; gap: 9px; font-size: 13px; }
+.wallet-btn.connected { background: #102d28; border-color: #245947; color: #a7f3d0; cursor: pointer; }
+.connection-dot { width: 9px; height: 9px; border-radius: 50%; background: #34d399; flex-shrink: 0; animation: connected-pulse 2s ease-in-out infinite; }
+@keyframes connected-pulse { 0%, 100% { box-shadow: 0 0 0 0 #34d39955; } 50% { box-shadow: 0 0 0 6px #34d39900; } }
+.network-strip { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; font-size: 12px; color: var(--text-muted); margin-bottom: 24px; }
+.network-label { background: #1b2940; border: 1px solid #354965; padding: 4px 12px; border-radius: 20px; color: #bfdbfe; }
+.overview-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 24px; }
+.stat-card { display: grid; gap: 8px; background: linear-gradient(145deg, #182638, #121d2e); border: 1px solid #2a3b50; border-radius: 16px; padding: 20px; min-width: 0; }
+.stat-card span { color: #cbd5e1; font-size: 13px; }
+.stat-card strong { font-size: clamp(18px, 2vw, 28px); color: #f8fafc; overflow-wrap: anywhere; }
+.stat-card small { color: var(--text-muted); font-size: 11px; }
+.workspace-grid { display: grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); align-items: start; gap: 24px; }
+.card { background: #152031; border: 1px solid #2a3a50; padding: 22px; border-radius: 16px; margin: 0; min-width: 0; }
+.card-title { font-size: 18px; margin-bottom: 12px; }
+.escrow-form { max-width: none; gap: 10px; }
+.escrow-form > label:not(.checkbox-group) { font-size: 12px; color: #cbd5e1; margin-top: 8px; }
+.input-field { min-width: 0; min-height: 44px; background: #0d1726; }
+.checkbox-group { background: #1c2b40; padding: 12px; border-radius: 10px; margin-top: 8px; align-items: flex-start; line-height: 1.9; }
+.checkbox-group input { margin-top: 7px; accent-color: #3b82f6; }
+.submit-btn { min-height: 44px; }
+.submit-btn:hover:not(:disabled) { background: #059669; }
+.section-description { margin-bottom: 14px; }
+.projects-card > .btn-action { margin-bottom: 16px; min-height: 38px; }
+.escrow-table { font-size: 12px; }
+.escrow-table th { white-space: nowrap; text-align: right; font-size: 11px; }
+.escrow-table td { text-align: right; padding: 14px 10px; }
+.escrow-table tr:last-child td { border-bottom: 0; }
+.budget-val { display: inline-block; white-space: nowrap; }
+.signers-box { align-items: stretch; }
+.signer-tag { width: auto; min-width: 72px; padding: 4px 6px; white-space: nowrap; }
+.status-badge { display: inline-block; white-space: nowrap; }
+.action-btns { flex-wrap: wrap; justify-content: flex-start; }
+.btn-action { min-height: 36px; }
+.contract-details { margin-top: 8px; font-size: 11px; }
+.contract-details summary { cursor: pointer; color: #cbd5e1; }
+.contract-details dl { margin: 8px 0; }
+.contract-details dl div { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+.contract-details dd { margin: 0; }
+.mode-label { display: block; color: var(--text-muted); font-size: 10px; margin-top: 6px; }
+.oracle-panel { background: #101a29; }
+.escrow-table .oracle-panel { min-width: 0; max-width: none; }
+.oracle-help, .oracle-warning, .oracle-message { margin: 8px 0; }
+.oracle-inputs code { color: #93c5fd; }
+.welcome-card { max-width: 800px; margin: 64px auto; padding: clamp(24px, 5vw, 56px); background: #152031; border: 1px solid #2a3a50; border-radius: 24px; }
+.welcome-card h2 { font-size: clamp(24px, 4vw, 38px); line-height: 1.7; margin: 16px 0; }
+.welcome-card p { color: #94a3b8; }
+.welcome-card .submit-btn { padding: 12px 28px; margin: 24px 0 12px; }
+.eyebrow { color: #60a5fa; font-size: 13px; }
+@media (max-width: 1250px) {
+  .workspace-grid { grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); gap: 16px; }
+  .escrow-table, .escrow-table tbody { display: block; }
+  .escrow-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .escrow-table tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 16px; border-bottom: 1px solid var(--border-color); }
+  .escrow-table td { display: block; min-width: 0; border: 0; padding: 8px; }
+  .escrow-table td::before { content: attr(data-label); display: block; color: var(--text-muted); font-size: 11px; margin-bottom: 8px; }
+  .escrow-table td:last-child { grid-column: 1 / -1; }
+  .signers-box { flex-direction: row; flex-wrap: wrap; }
+  .table-wrapper { overflow: visible; }
+}
+@media (max-width: 800px) {
+  .workspace-grid { grid-template-columns: minmax(0, 1fr); }
+  .overview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .app-container { padding: 20px 16px; }
+  .card { padding: 18px; }
+  .top-header { align-items: flex-start; }
+  .wallet-controls { width: 100%; }
+  .welcome-card { margin-top: 28px; }
+}
+@media (max-width: 420px) {
+  .wallet-controls .wallet-btn { flex-grow: 1; justify-content: center; font-size: 11px; }
+  .wallet-controls .connected { width: 100%; }
+  .stat-card { padding: 14px; }
+  .network-strip { gap: 10px; }
+  .escrow-table tr { padding: 8px; }
+}
+@media (prefers-reduced-motion: reduce) { .connection-dot { animation: none; } }
