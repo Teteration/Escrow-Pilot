@@ -11,8 +11,8 @@ The client connects an injected wallet to Sepolia, creates an Ethers v6 signer, 
 ```mermaid
 stateDiagram-v2
     [*] --> FUNDED: Factory creation with ETH
-    FUNDED --> COMPLETED: Two release approvals or Oracle decision 1
-    FUNDED --> REFUNDED: Two refund approvals or Oracle decision 2
+    FUNDED --> COMPLETED: Two release votes
+    FUNDED --> REFUNDED: Two refund votes
     COMPLETED --> [*]
     REFUNDED --> [*]
 ```
@@ -29,7 +29,7 @@ Release pays contractor; refund pays employer. Terminal states reject further re
 
 Fixed Sepolia LINK/Oracle addresses and a job ID are initialized. Employer or contractor can request a decision with a caller-supplied API URL and JSON path. Requests require LINK in that escrow; deployment scripts do not fund it.
 
-Chainlink fulfillment validates the request source. Decision `1` releases ETH, `2` refunds it; other values do not settle. Oracle settlement bypasses the manual two-vote threshold. Employer/contractor manual settlement remains possible; arbiter manual approval is disabled.
+Chainlink fulfillment validates the request source. The first valid decision (`1` release, `2` refund) records one immutable Oracle vote. One matching employer/contractor vote is also required, in either order. Two human votes can still settle. Duplicate, invalid, or late authenticated responses add no votes; invalid responses allow a new request. Manual arbiter is normalized to zero in Oracle mode. The GET uint256 job uses `times=1`. These changes require fresh deployment; old instances retain their original behavior.
 
 The UI allows Oracle-mode creation but has no request operation. Node/job compatibility, availability, source neutrality, and funding are unverified. See the [threat model](threat-model.md).
 

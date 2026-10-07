@@ -17,7 +17,7 @@ Backend is ESM; `.cjs` tests load Hardhat/Chai through CommonJS. Backend `npm te
 
 Five tests in `escrow-pilot/test/TrustToken.cjs` check metadata/supply/allocation, transfers, allowances, invalid transfers, and absence of external mint/burn functions.
 
-This does **not** establish escrow or Oracle safety. Those contracts have no automated tests yet. There are no frontend tests, coverage metrics, or CI workflow. Lint/build are not wallet integration tests.
+`OracleVoting.cjs` adds 20 focused local regressions with test-only LINK/node mocks: job encoding/payment, human-plus-Oracle votes for both outcomes and orders, forged callbacks, duplicate/conflicting responses, invalid decisions, late responses, human agreement, and all manual role pairs. These do **not** establish live Oracle availability or complete escrow safety. Comprehensive escrow tests, frontend tests, coverage metrics, and CI remain pending. Lint/build are not wallet integration tests.
 
 ## Next priorities
 

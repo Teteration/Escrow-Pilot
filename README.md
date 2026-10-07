@@ -37,7 +37,7 @@ flowchart LR
 | --- | --- |
 | Factory and manual escrow | Implemented; automated escrow tests still needed |
 | Dashboard | Connection, creation, release/refund approvals |
-| Oracle mode | Contract pathway exists; no request UI or verified live integration |
+| Oracle mode | Two-vote logic locally tested; request/status script; live node unverified |
 | TRUST token | Standalone ERC-20; five tests; no DApp integration |
 | CI / frontend tests | Not configured |
 | Hosted demo / screenshots | Not published here yet |
@@ -70,7 +70,7 @@ Open the address printed by Vite. The client uses the checked-in Factory address
 escrow-pilot/
   contracts/          Escrow, embedded Factory, legacy Oracle, standalone token
   scripts/            Separate Factory and token deployments
-  test/               Token tests
+  test/               Token and focused Oracle vote regression tests
   hardhat.config.js   Solidity and Sepolia configuration
 frontend/
   src/                Dashboard, styles, exported contract interfaces

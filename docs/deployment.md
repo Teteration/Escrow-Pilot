@@ -21,7 +21,25 @@ Deploys only Factory and exports to the sibling frontend:
 
 Users create escrows by sending ETH through the client. Manual mode needs no LINK. Experimental Oracle requests need separate LINK deposits to each escrow.
 
-## Optional standalone token
+## Revised Oracle workflow
+
+The updated escrow requires two matching votes, including at most one Oracle vote. Deploy a **new Factory** with the command above and create a new Oracle-mode escrow. Existing deployed instances cannot be patched. Never overwrite old addresses/ABIs until ready to switch the client. The current dashboard has no Oracle-request form or dynamic Oracle-vote badge; use this script to inspect the actual on-chain vote.
+
+Transfer at least 0.1 Sepolia LINK to the **individual escrow**. From `escrow-pilot`, inspect it without sending a request:
+
+```bash
+ESCROW_ADDRESS=0xYourNewEscrow npx hardhat run scripts/request-oracle.js --network sepolia
+```
+
+Send a paid request explicitly (replace example values with your test deployment and public API):
+
+```bash
+ESCROW_ADDRESS=0xYourNewEscrow ORACLE_SEND=true ORACLE_API_URL=https://your-api.example/status ORACLE_JSON_PATH=status npx hardhat run scripts/request-oracle.js --network sepolia
+```
+
+API should return JSON with integer status 1 or 2, for example `{"status":1}`. Nested job paths use comma delimiters. Do not let arbitrary participant-owned endpoints decide production disputes. The script checks network, role, revised interface, and LINK funding, then logs transaction/request ID. Run read-only again later; request confirmation is not proof of callback. Public job availability is not guaranteed. A dedicated compatible node/job or a separately designed service is needed if the public node does not respond.
+
+## Optional standalone token deployment
 
 ```bash
 cd escrow-pilot

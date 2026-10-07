@@ -18,11 +18,11 @@ Manual mode trusts a two-person coalition: any two roles can resolve against the
 | Competing outcomes | Independent release/refund votes; first threshold wins |
 | Oracle trust | Caller supplies URL/path; authenticated callback does not prove neutral business outcome |
 | Oracle availability | Fixed node/job unverified; LINK manual; requests may fail or remain pending |
-| Oracle precedence | Decisions settle without second participant approval |
+| Oracle data manipulation | One human plus Oracle can settle; caller-supplied API still needs a neutral source policy |
 | Legacy bypass | `EscrowOracle.forceOracleApproval` unrestricted; do not deploy for escrow use |
 | Scaling | Unbounded listing and sequential client reads |
 | Configuration | Wrong address/ABI/network; Factory export overwrites map |
-| Evidence gap | No escrow/Oracle test suites or independent audit |
+| Evidence gap | Focused Oracle regression tests exist; comprehensive escrow tests and independent audit remain missing |
 
 State updates precede outbound calls and failed transfers revert. Adversarial testing is still required; this is not a complete safety argument.
 

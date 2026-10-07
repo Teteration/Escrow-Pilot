@@ -22,6 +22,9 @@ contract TrustEscrow is ChainlinkClient {
     uint8 public releaseApprovals;
     uint8 public refundApprovals;
 
+    // First valid Oracle response is one immutable vote: 0=none, 1=release, 2=refund.
+    uint8 public oracleDecision;
+
     mapping(address => bool) public hasApprovedRelease;
     mapping(address => bool) public hasApprovedRefund;
 
@@ -34,6 +37,8 @@ contract TrustEscrow is ChainlinkClient {
     event FundsReleased(address indexed contractor, uint256 amount);
     event FundsRefunded(address indexed employer, uint256 amount);
     event OracleRequested(bytes32 indexed requestId);
+    event OracleVoteRecorded(bytes32 indexed requestId, uint8 decision, uint8 totalApprovals);
+    event OracleResponseIgnored(bytes32 indexed requestId, uint256 decision);
 
     modifier inState(State _state) {
         require(currentState == _state, "Invalid state for this action");
@@ -59,7 +64,7 @@ contract TrustEscrow is ChainlinkClient {
         
         employer = _employer;
         contractor = _contractor;
-        arbiter = _arbiter;
+        arbiter = _isOracleMode ? address(0) : _arbiter;
         isOracleMode = _isOracleMode;
         budget = msg.value;
         currentState = State.FUNDED;
@@ -68,7 +73,7 @@ contract TrustEscrow is ChainlinkClient {
         if (isOracleMode) {
             setChainlinkToken(_linkToken);
             setChainlinkOracle(_oracleAddress);
-            jobId = "7d80a6386ef543a3abb52817f6707e3b"; // Job ID پیش‌فرض برای دریافت داده (uint256)
+            jobId = "ca98366cc7314957b8c012c72f05aeeb"; // GET > uint256
             fee = (1 * LINK_DIVISIBILITY) / 10; // 0.1 LINK
         }
     }
@@ -124,10 +129,13 @@ contract TrustEscrow is ChainlinkClient {
     function requestOracleDecision(string memory apiUrl, string memory path) external inState(State.FUNDED) returns (bytes32 requestId) {
         require(isOracleMode, "Contract is in manual mode! Oracle disabled.");
         require(msg.sender == employer || msg.sender == contractor, "Only parties can request");
+        require(oracleDecision == 0, "Oracle already voted");
+        require(bytes(apiUrl).length > 0 && bytes(path).length > 0, "Missing API URL or path");
 
         Chainlink.Request memory req = buildChainlinkRequest(jobId, address(this), this.fulfill.selector);
         req.add("get", apiUrl);
         req.add("path", path); // مثلاً وضعیت پروژه در دیتابیس شما (1 = تسویه، 2 = لغو)
+        req.addInt("times", 1); // Required by the uint256 job; preserve integer decisions.
         
         requestId = sendChainlinkRequest(req, fee);
         emit OracleRequested(requestId);
@@ -136,15 +144,21 @@ contract TrustEscrow is ChainlinkClient {
 
     // تابعی که شبکه چین‌لینک جواب را به آن برمی‌گرداند
     function fulfill(bytes32 _requestId, uint256 _decision) public recordChainlinkFulfillment(_requestId) {
-        require(currentState == State.FUNDED, "Already resolved");
-        
-        // تصمیم 1: یعنی اوراکل (API) رای به تسویه داده است
+        // Consume authenticated late/duplicate/invalid responses without adding votes.
+        if (currentState != State.FUNDED || oracleDecision != 0 || (_decision != 1 && _decision != 2)) {
+            emit OracleResponseIgnored(_requestId, _decision);
+            return;
+        }
+
+        oracleDecision = uint8(_decision);
         if (_decision == 1) {
-            _executeRelease();
-        } 
-        // تصمیم 2: یعنی اوراکل (API) رای به لغو و بازگشت وجه داده است
-        else if (_decision == 2) {
-            _executeRefund();
+            releaseApprovals++;
+            emit OracleVoteRecorded(_requestId, 1, releaseApprovals);
+            if (releaseApprovals >= 2) _executeRelease();
+        } else {
+            refundApprovals++;
+            emit OracleVoteRecorded(_requestId, 2, refundApprovals);
+            if (refundApprovals >= 2) _executeRefund();
         }
     }
 
