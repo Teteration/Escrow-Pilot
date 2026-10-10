@@ -1,0 +1,18 @@
+{
+  "repository": "https://github.com/sickn33/agentic-awesome-skills",
+  "revision": "5d30df0eaa2c9c5021d72466227290ac5122dd26",
+  "installation": "documentation-only; original SKILL.md plus local boundary note; no scripts",
+  "files": {
+    "fixing-accessibility/CATALOG-LICENSE.txt": "af98370a7edc0f00ec46979d049517833c9a7fa2ba74e3cf8cc42f7db557299d",
+    "fixing-accessibility/LICENSE.txt": "c615621c4cc1676ccde194e7a01b6469ba477780251bd71e007fc473a49c2c2b",
+    "fixing-accessibility/SKILL.md": "f2dcbdde818ff77f51a76e5617366b9156a14a123fd7b00a3a68e8725961dae8",
+    "frontend-design/CATALOG-LICENSE.txt": "af98370a7edc0f00ec46979d049517833c9a7fa2ba74e3cf8cc42f7db557299d",
+    "frontend-design/LICENSE.txt": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594",
+    "frontend-design/SKILL.md": "169a07a61ef9fd0d29024cb13b2f6b04524f3463bb953a4996a9e7eefd38a410",
+    "senior-frontend/CATALOG-LICENSE.txt": "af98370a7edc0f00ec46979d049517833c9a7fa2ba74e3cf8cc42f7db557299d",
+    "senior-frontend/SKILL.md": "35f85f2151c3b76c622f72d815db7b9127b6b92dcae325b71d425e66d662c5e2",
+    "senior-frontend/references/frontend_best_practices.md": "b6231c354c2665671cb4ec0db7fab0143ddf533647e8b0b2dffb2b42f4890fc1",
+    "senior-frontend/references/nextjs_optimization_guide.md": "6080456975399fef46e01dda08856e901f8a96b48574fefdf4d9b73c34457fb9",
+    "senior-frontend/references/react_patterns.md": "b626ba1d38af86e746524c4b71c93a1f7b73ed659256e04a143bf5384df97160"
+  }
+}

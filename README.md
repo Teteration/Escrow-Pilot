@@ -82,6 +82,7 @@ docs/                 Architecture, setup, deployment, tests, risks, decisions
 
 ## Documentation
 
+- [Frontend skills and initial interface review](docs/frontend-skills.md)
 - [Project status and continuation on another computer](docs/project-handover.md)
 - [Architecture and state transitions](docs/architecture.md)
 - [Local development](docs/local-development.md)
@@ -100,3 +101,6 @@ Isolated contracts simplify project accounting but cost more gas than a shared r
 ## License
 
 [MIT](LICENSE) for original project code. Dependencies retain their own licenses.
+## Release version
+
+Current UI release: **1.1.0** (`V1.1.0`). See [release notes](CHANGELOG.md). This remains an unaudited testnet pilot, not a mainnet-ready release.

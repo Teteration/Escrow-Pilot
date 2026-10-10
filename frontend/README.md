@@ -14,6 +14,8 @@ Uses an injected wallet on Sepolia and `src/contracts/contract-address.json`, `E
 
 ## Implemented interface features
 
+- Unified navy/emerald styling, address search and status filters (statistics stay factory-wide), accessible transaction lifecycle notices with explorer links, read-loading/error feedback, keyboard skip link, table caption/column scopes and associated Oracle input help. Visual and real-wallet acceptance remain pending.
+
 - Persian/English language selector, browser-local preference persistence, translated interface and application messages, language-aware statistics, and document `lang`/`dir` updates. Switching language does not reset wallet or form state. Provider/RPC error details and blockchain identifiers retain their original values.
 
 - Responsive Persian RTL / English LTR dark dashboard: side-by-side creation/project workspace on wider screens, stacked sections and labeled project cards on smaller screens.

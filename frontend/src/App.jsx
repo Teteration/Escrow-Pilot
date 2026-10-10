@@ -13,13 +13,13 @@ function OracleInputs({ settings, onChange, prefix, disabled = false }) {
     <div className="oracle-inputs">
       <label htmlFor={`${prefix}-url`}>{t("آدرس API (با HTTPS)")}</label>
       <input id={`${prefix}-url`} className="input-field" type="url" required disabled={disabled}
-        value={settings.url} placeholder="https://example.com/project/status"
+        aria-describedby={`${prefix}-help`} value={settings.url} placeholder="https://example.com/project/status"
         onChange={e => onChange({ ...settings, url: e.target.value })} />
       <label htmlFor={`${prefix}-path`}>{t("مسیر فیلد عددی در پاسخ")}</label>
       <input id={`${prefix}-path`} className="input-field" required disabled={disabled}
-        value={settings.path} placeholder={t("status یا data,status")}
+        aria-describedby={`${prefix}-help`} value={settings.path} placeholder={t("status یا data,status")}
         onChange={e => onChange({ ...settings, path: e.target.value })} />
-      <p className="oracle-help">{t("پاسخ باید عددی باشد: ۱ = رأی به تسویه، ۲ = رأی به بازپرداخت. پاسخ متنی پشتیبانی نمی‌شود.")}</p>
+      <p id={`${prefix}-help`} className="oracle-help">{t("پاسخ باید عددی باشد: ۱ = رأی به تسویه، ۲ = رأی به بازپرداخت. پاسخ متنی پشتیبانی نمی‌شود.")}</p>
       <code dir="ltr">{'{"status": 1}'}</code>
     </div>
   );
@@ -31,6 +31,11 @@ function App() {
   const [factoryContract, setFactoryContract] = useState(null);
   const [escrows, setEscrows] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [readBusy, setReadBusy] = useState(false);
+  const [readError, setReadError] = useState('');
+  const [transaction, setTransaction] = useState(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [formError, setFormError] = useState(''); // مدیریت خطای فرم بدون پاپ‌آپ
 
   const [newContractor, setNewContractor] = useState('');
@@ -56,6 +61,11 @@ function App() {
     setOracleSettings({});
     setOracleMessages({});
     setFormError('');
+    setTransaction(null);
+    setReadError('');
+    setReadBusy(false);
+    setSearch('');
+    setStatusFilter('all');
     setNewContractor('');
     setNewArbiter('');
     setNewBudget('');
@@ -65,6 +75,8 @@ function App() {
 
   const fetchEscrows = useCallback(async (factoryIns, provider) => {
     const generation = session.current;
+    setReadBusy(true);
+    setReadError('');
     try {
       const addresses = await factoryIns.getAllEscrows();
       const allEscrowData = [];
@@ -109,6 +121,9 @@ function App() {
       if (connected.current && generation === session.current) setEscrows(allEscrowData);
     } catch (error) {
       console.error("Fetch Error:", error);
+      if (generation === session.current) setReadError('خواندن قراردادها ناموفق بود؛ دوباره تلاش کنید.');
+    } finally {
+      if (generation === session.current) setReadBusy(false);
     }
   }, []);
 
@@ -213,6 +228,7 @@ function App() {
 
     try {
       setLoading(true);
+      setTransaction({ stage: 'pending', message: 'منتظر تأیید کیف پول…' });
       const amountInWei = ethers.parseEther(newBudget.toString());
       const finalArbiter = isOracleMode ? ethers.ZeroAddress : newArbiter;
 
@@ -220,7 +236,9 @@ function App() {
         newContractor, finalArbiter, isOracleMode, { value: amountInWei }
       );
 
+      setTransaction({ stage: 'pending', message: 'تراکنش ارسال شد؛ منتظر تأیید شبکه…', hash: tx.hash });
       const receipt = await tx.wait();
+      setTransaction({ stage: 'success', message: 'قرارداد جدید در شبکه ثبت شد.', hash: tx.hash });
       if (isOracleMode) {
         for (const log of receipt.logs) {
           try {
@@ -243,6 +261,7 @@ function App() {
         msg = "خطا: ناظر باید یک شخص ثالث و بی‌طرف باشد و نمی‌‌تواند خودتان یا پیمانکار باشید.";
       }
       setFormError(msg);
+      setTransaction({ stage: 'error', message: error.code === 'ACTION_REJECTED' ? 'تراکنش توسط شما رد شد.' : msg });
     } finally {
       setLoading(false);
     }
@@ -286,6 +305,7 @@ function App() {
   const handleAction = async (escrowAddress, actionType) => {
     try {
       setLoading(true);
+      setTransaction({ stage: 'pending', message: 'منتظر تأیید کیف پول…' });
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const escrowContract = new ethers.Contract(escrowAddress, EscrowJSON.abi, signer);
@@ -294,11 +314,13 @@ function App() {
         ? await escrowContract.approveRelease()
         : await escrowContract.approveRefund();
 
+      setTransaction({ stage: 'pending', message: 'تراکنش ارسال شد؛ منتظر تأیید شبکه…', hash: tx.hash });
       await tx.wait();
-      fetchEscrows(factoryContract, provider);
+      setTransaction({ stage: 'success', message: 'رأی شما در شبکه ثبت شد.', hash: tx.hash });
+      await fetchEscrows(factoryContract, provider);
     } catch (error) {
       console.error("Action Error:", error);
-      alert(t("شما قبلا رای داده‌اید یا مجاز به این عملیات نیستید."));
+      setTransaction({ stage: 'error', message: error.code === 'ACTION_REJECTED' ? 'تراکنش توسط شما رد شد.' : `ارسال ناموفق: ${error.reason || error.shortMessage || error.message}` });
     } finally {
       setLoading(false);
     }
@@ -339,8 +361,14 @@ function App() {
     );
   };
 
+  const visibleEscrows = escrows.filter(item =>
+    (statusFilter === 'all' || item.state === Number(statusFilter)) &&
+    [item.address, item.employer, item.contractor, item.arbiter].some(address => address.toLowerCase().includes(search.trim().toLowerCase()))
+  );
+
   return (
     <div className="app-container" dir={language === 'fa' ? 'rtl' : 'ltr'}>
+      <a className="skip-link" href="#main-content">{t("رفتن به محتوای اصلی")}</a>
       <header className="top-header">
         <div className="brand"><h1 className="logo" dir="ltr">TrustDApp</h1><span className="brand-subtitle">{t("مدیریت امن قراردادهای امانی")}</span></div>
         <label className="language-control">
@@ -367,9 +395,11 @@ function App() {
       {walletError && <p className="wallet-error" role="alert">{t(walletError)}</p>}
 
       <div className="network-strip"><span className="network-label">{t("شبکهٔ آزمایشی ")}<bdi>Sepolia</bdi></span><a href={`https://sepolia.etherscan.io/address/${AddressJSON.EscrowFactory}`} target="_blank" rel="noopener noreferrer">{t("مشاهدهٔ کارخانهٔ قراردادها ↗")}</a><span>{t("توکن TRUST مستقل از این برنامه است")}</span></div>
-      {!account && <section className="welcome-card"><span className="eyebrow">{t("قراردادهای امانی روی بلاکچین")}</span><h2>{t("همکاری با شفافیت، پرداخت با توافق")}</h2><p>{t("کیف پول سازگار با اتریوم را متصل کنید تا قرارداد بسازید، رأی بدهید و وضعیت پرداخت‌ها را بررسی کنید.")}</p><button className="submit-btn" disabled={walletBusy} onClick={() => connectWallet()}>{t("اتصال به کیف پول")}</button><p className="oracle-help">{t("این نسخه آزمایشی است؛ از دارایی شبکهٔ اصلی استفاده نکنید.")}</p></section>}
+      {!account && <section id="main-content" tabIndex="-1" className="welcome-card"><span className="eyebrow">{t("قراردادهای امانی روی بلاکچین")}</span><h2>{t("همکاری با شفافیت، پرداخت با توافق")}</h2><p>{t("کیف پول سازگار با اتریوم را متصل کنید تا قرارداد بسازید، رأی بدهید و وضعیت پرداخت‌ها را بررسی کنید.")}</p><button className="submit-btn" disabled={walletBusy} onClick={() => connectWallet()}>{t("اتصال به کیف پول")}</button><p className="oracle-help">{t("این نسخه آزمایشی است؛ از دارایی شبکهٔ اصلی استفاده نکنید.")}</p></section>}
       {account && (
-        <main>
+        <main id="main-content" tabIndex="-1">
+          <div className="dashboard-heading"><div><span className="eyebrow">{t("فضای کاری شما")}</span><h2>{t("داشبورد پروژه‌ها")}</h2><p>{t("مدیریت وجوه، تصمیم‌های شفاف")}</p></div><span className="pilot-badge">{t("نسخهٔ آزمایشی · Sepolia")}</span></div>
+          {transaction && <div className={`transaction-notice ${transaction.stage}`} role={transaction.stage === 'error' ? 'alert' : 'status'}><div><strong>{t(transaction.message)}</strong>{transaction.hash && <a href={`https://sepolia.etherscan.io/tx/${transaction.hash}`} target="_blank" rel="noopener noreferrer">{t("مشاهدهٔ تراکنش ↗")}</a>}</div>{!loading && <button className="notice-close" type="button" aria-label={t("بستن پیام")} onClick={() => setTransaction(null)}>×</button>}</div>}
           <section className="overview-grid" aria-label={t("خلاصهٔ قراردادهای کارخانه")}>
             <div className="stat-card"><span>{t("کل قراردادها")}</span><strong>{escrows.length.toLocaleString(locale)}</strong><small>{t("در کارخانهٔ فعلی؛ همهٔ کاربران")}</small></div>
             <div className="stat-card"><span>{t("قراردادهای فعال")}</span><strong>{escrows.filter(item => item.state === 0).length.toLocaleString(locale)}</strong><small>{t("در انتظار تصمیم طرفین")}</small></div>
@@ -378,19 +408,20 @@ function App() {
           </section>
           <div className="workspace-grid">
           <section className="card create-card">
-            <h3 className="card-title">{t("تعریف قرارداد جدید")}</h3>
-            <form className="escrow-form" onSubmit={createNewEscrow}>
+            <h2 className="card-title">{t("تعریف قرارداد جدید")}</h2>
+            <p className="section-description">{t("بودجه در قرارداد قفل می‌شود؛ تصمیم نهایی به دو رأی موافق نیاز دارد.")}</p>
+            <form className="escrow-form" aria-busy={loading} onSubmit={createNewEscrow}>
               <label htmlFor="contractor">{t("آدرس پیمانکار")}</label><input id="contractor" className="input-field" type="text" placeholder="0x…"
-                value={newContractor} onChange={e => setNewContractor(e.target.value)} required />
+                aria-describedby={formError ? "create-error" : undefined} value={newContractor} onChange={e => { setNewContractor(e.target.value); setFormError(''); }} required />
 
               <label htmlFor="arbiter">{t("آدرس ناظر")}</label><input id="arbiter" className="input-field" type="text"
                 placeholder={isOracleMode ? t("توسط شبکه اوراکل مدیریت می‌شود") : t("آدرس کیف پول ناظر (Arbiter)")}
                 value={isOracleMode ? "" : newArbiter}
-                onChange={e => setNewArbiter(e.target.value)}
+                aria-describedby={formError ? "create-error" : undefined} onChange={e => { setNewArbiter(e.target.value); setFormError(''); }}
                 disabled={isOracleMode} required={!isOracleMode} />
 
               <label htmlFor="budget">{t("بودجهٔ پروژه (ETH)")}</label><input id="budget" className="input-field" type="number" step="any" min="0" placeholder="0.01"
-                value={newBudget} onChange={e => setNewBudget(e.target.value)} required />
+                aria-describedby={formError ? "create-error" : undefined} value={newBudget} onChange={e => { setNewBudget(e.target.value); setFormError(''); }} required />
 
               <label className="checkbox-group">
                 <input type="checkbox" checked={isOracleMode} onChange={e => setIsOracleMode(e.target.checked)} />
@@ -406,7 +437,7 @@ function App() {
               )}
 
               {formError && (
-                <div style={{ color: '#ef4444', fontSize: '0.85rem', background: 'rgba(239, 68, 68, 0.1)', padding: '10px', borderRadius: '6px', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                <div id="create-error" className="wallet-error" role="alert">
                   {t(formError)}
                 </div>
               )}
@@ -418,23 +449,29 @@ function App() {
           </section>
 
           <section className="card projects-card">
-            <h3 className="card-title">{t("داشبورد پروژه‌ها")}</h3><p className="section-description">{t("جزئیات قرارداد، رأی‌ها و عملیات؛ همهٔ قراردادهای کارخانه نمایش داده می‌شوند.")}</p>
-            <button className="btn-action btn-oracle" disabled={loading} onClick={() => fetchEscrows(factoryContract, new ethers.BrowserProvider(window.ethereum))}>{t("تازه‌سازی وضعیت")}</button>
-            <div className="table-wrapper">
-              <table className="escrow-table">
+            <h2 className="card-title">{t("داشبورد پروژه‌ها")}</h2><p className="section-description">{t("جزئیات قرارداد، رأی‌ها و عملیات؛ همهٔ قراردادهای کارخانه نمایش داده می‌شوند.")}</p>
+            <button className="btn-action btn-oracle" disabled={loading || readBusy} onClick={() => fetchEscrows(factoryContract, new ethers.BrowserProvider(window.ethereum))}>{t("تازه‌سازی وضعیت")}</button>
+            <div className="project-toolbar">
+              <label className="search-control"><span>{t("جست‌وجوی آدرس")}</span><input className="input-field" type="search" placeholder="0x…" value={search} onChange={event => setSearch(event.target.value)} /></label>
+              <label className="filter-control"><span>{t("وضعیت")}</span><select value={statusFilter} onChange={event => setStatusFilter(event.target.value)}><option value="all">{t("همهٔ وضعیت‌ها")}</option><option value="0">{t("در جریان")}</option><option value="1">{t("تسویه شده")}</option><option value="2">{t("لغو شده")}</option></select></label>
+            </div>
+            {readBusy && <p className="read-status" role="status">{t("در حال خواندن اطلاعات شبکه…")}</p>}
+            {readError && <p className="wallet-error" role="alert">{t(readError)}</p>}
+            <div className="table-wrapper" aria-busy={readBusy}>
+              <table className="escrow-table"><caption className="sr-only">{t("جزئیات قرارداد، رأی‌ها و عملیات؛ همهٔ قراردادهای کارخانه نمایش داده می‌شوند.")}</caption>
                 <thead>
                   <tr>
-                    <th>{t("قرارداد")}</th>
-                    <th>{t("مبلغ")}</th>
-                    <th>{t("نقش شما")}</th>
-                    <th>{t("وضعیت")}</th>
-                    <th>{t("وضعیت تسویه")}</th>
-                    <th>{t("وضعیت لغو")}</th>
-                    <th>{t("عملیات")}</th>
+                    <th scope="col">{t("قرارداد")}</th>
+                    <th scope="col">{t("مبلغ")}</th>
+                    <th scope="col">{t("نقش شما")}</th>
+                    <th scope="col">{t("وضعیت")}</th>
+                    <th scope="col">{t("وضعیت تسویه")}</th>
+                    <th scope="col">{t("وضعیت لغو")}</th>
+                    <th scope="col">{t("عملیات")}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {escrows.map((m) => (
+                  {visibleEscrows.map((m) => (
                     <tr key={m.address}>
                       <td data-label={t("قرارداد")}><a className="address-cell" href={`https://sepolia.etherscan.io/address/${m.address}`} target="_blank" rel="noopener noreferrer" title={m.address}>{formatAddress(m.address)} ↗</a><details className="contract-details"><summary>{t("جزئیات طرفین")}</summary><dl>{[[t("کارفرما"), m.employer], [t("پیمانکار"), m.contractor], ...(!m.isOracle ? [[t("ناظر"), m.arbiter]] : [])].map(([role, address]) => <div key={role}><dt>{role}</dt><dd><a href={`https://sepolia.etherscan.io/address/${address}`} target="_blank" rel="noopener noreferrer"><bdi title={address}>{formatAddress(address)}</bdi> ↗</a></dd></div>)}</dl></details><span className="mode-label">{m.isOracle ? t("اوراکل · آزمایشی") : t("داوری دستی")}</span></td>
                       <td data-label={t("بودجه")}><span className="budget-val">{m.budget} ETH</span></td>
@@ -472,9 +509,9 @@ function App() {
                       </td>
                     </tr>
                   ))}
-                  {escrows.length === 0 && (
+                  {visibleEscrows.length === 0 && !readBusy && !readError && (
                     <tr>
-                      <td colSpan="7" style={{ padding: '2rem', color: '#94a3b8' }}>{t("هیچ پروژه‌ای یافت نشد.")}</td>
+                      <td colSpan="7" style={{ padding: '2rem', color: '#94a3b8' }}><div className="empty-state"><span aria-hidden="true">◇</span><strong>{t("هیچ پروژه‌ای یافت نشد.")}</strong><p>{t("فیلترها را تغییر دهید یا نخستین قرارداد را بسازید.")}</p></div></td>
                     </tr>
                   )}
                 </tbody>

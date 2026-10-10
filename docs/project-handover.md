@@ -1,6 +1,6 @@
 # Project status and continuation guide
 
-Last reviewed: October 7, 2026. Code baseline: `886108a` on `main`.
+Last reviewed: October 7, 2026. Current UI release: `V1.1.0` on `main` (see CHANGELOG.md).
 This is a repository handover, not an audit or a guarantee of deployed behavior.
 Read this first when continuing on another computer or in a new assistant session.
 
@@ -69,6 +69,11 @@ CRE development is paused pending a deliberate decision on access and scope.
 Keep the prototype isolated; do not silently replace the existing integration.
 
 ## Remaining work, in priority order
+
+Project-local design, frontend and accessibility skills have been installed as
+documentation-only subsets. See [skills and initial review](frontend-skills.md)
+and `.cline/skills-source.json` for scope, source revision and next proposals.
+No visual redesign has been implemented by that installation.
 
 1. Manually accept Persian and English layouts at desktop/mobile widths: selector
    persistence, RTL/LTR, long copy, addresses, form state and no horizontal overflow.

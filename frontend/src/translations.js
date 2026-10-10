@@ -95,5 +95,20 @@ export const translations = {
   "ارسال ناموفق: ": "Submission failed: ",
   "فارسی": "Persian",
   "زبان": "Language",
-  "اوراکل": "Oracle"
+  "اوراکل": "Oracle",
+  "رفتن به محتوای اصلی": "Skip to main content",
+  "فضای کاری شما": "YOUR WORKSPACE",
+  "مدیریت وجوه، تصمیم‌های شفاف": "Manage funds. Make decisions transparent.",
+  "نسخهٔ آزمایشی · Sepolia": "TESTNET PILOT \u00b7 Sepolia",
+  "تراکنش ارسال شد؛ منتظر تأیید شبکه…": "Transaction submitted. Waiting for network confirmation\u2026",
+  "قرارداد جدید در شبکه ثبت شد.": "Your new escrow is confirmed on-chain.",
+  "رأی شما در شبکه ثبت شد.": "Your vote is confirmed on-chain.",
+  "مشاهدهٔ تراکنش ↗": "View transaction \u2197",
+  "بستن پیام": "Dismiss message",
+  "جست‌وجوی آدرس": "Search by address",
+  "همهٔ وضعیت‌ها": "All statuses",
+  "در حال خواندن اطلاعات شبکه…": "Reading on-chain data\u2026",
+  "خواندن قراردادها ناموفق بود؛ دوباره تلاش کنید.": "Could not read contracts. Please try refreshing.",
+  "بودجه در قرارداد قفل می‌شود؛ تصمیم نهایی به دو رأی موافق نیاز دارد.": "Funds are locked in the escrow. Resolution requires two matching approvals.",
+  "فیلترها را تغییر دهید یا نخستین قرارداد را بسازید.": "Adjust your filters or create your first escrow."
 };
