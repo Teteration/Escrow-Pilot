@@ -11,8 +11,8 @@ TrustDApp explores how an employer and a contractor can lock ETH in a dedicated 
 - **Factory pattern:** each project gets an isolated `TrustEscrow` instance and ETH balance.
 - **Explicit lifecycle:** funded escrows transition to completed or refunded states.
 - **Role-based approvals:** manual resolution requires two distinct approvals among employer, contractor, and arbiter for the same outcome.
-- **Wallet controls:** connect an injected Ethereum wallet, request account selection, disconnect the application, and react to account/network changes. A green animated indicator identifies the connected account; permission support depends on the wallet.
-- **Responsive Persian UI:** a dark RTL workspace places creation and project management side by side on wider screens and uses labeled project cards on smaller screens. Reduced-motion preferences disable the connection animation.
+- **Wallet controls:** connect an injected Ethereum wallet or use mobile/QR WalletConnect, request account selection, disconnect the application, and react to account/network changes. A green animated indicator identifies the connected account; permission support depends on the wallet.
+- **Responsive bilingual UI:** a light/dark Persian RTL or English LTR workspace places creation and project management side by side on wider screens and uses labeled project cards on smaller screens. Reduced-motion preferences disable the connection animation.
 - **Language selection:** switch between Persian and English without resetting the wallet or forms; selection is saved locally, and document direction and statistics follow the chosen language.
 - **Dashboard visibility:** factory-wide contract counts, active registered budgets, participant details, arbitration modes, approval badges, and Sepolia Etherscan links for accounts, escrows, and the Factory.
 - **Experimental Oracle controls:** HTTPS API URL and JSON field path inputs, request submission, status messages, vote reads where supported, and explicit LINK-cost and service-availability warnings.
@@ -104,3 +104,11 @@ Isolated contracts simplify project accounting but cost more gas than a shared r
 ## Release version
 
 Current UI release: **1.1.0** (`V1.1.0`). See [release notes](CHANGELOG.md). This remains an unaudited testnet pilot, not a mainnet-ready release.
+
+### Light and dark themes
+
+The header offers a translated light/dark theme selector. Dark is the default; the preference is saved locally and restored before the app renders. Changing theme preserves wallet, language, and form state. Browser visual and wallet interaction checks remain pending.
+
+### Mobile wallet connection
+
+Use the mobile/QR button for WalletConnect, or an injected wallet in its in-app browser. Configure `VITE_WALLETCONNECT_PROJECT_ID` using `frontend/.env.example` (copy to `.env.local` in the frontend directory) and restart Vite. No secrets or private keys belong in frontend variables. WalletConnect code is lazy-loaded. Real-device acceptance remains pending. See the [feature inventory](docs/features.md) for setup, limitations, and test steps.

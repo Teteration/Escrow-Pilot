@@ -27,7 +27,7 @@ Uses an injected wallet on Sepolia and `src/contracts/contract-address.json`, `E
 
 ## Important limitations
 
-- Wallet access uses `window.ethereum`; multi-provider discovery/selection and WalletConnect are not implemented. Wallet-neutral wording does not imply universal wallet support.
+- Injected wallet access uses `window.ethereum`; multi-provider discovery/selection is not implemented. Mobile/QR sessions use WalletConnect. Wallet-neutral wording does not imply universal wallet support.
 - Account-selection and permission-revocation requests depend on wallet support. Disconnect clears application state but does not lock the wallet; permissions may remain if revocation fails.
 - Oracle API settings are page-local, disappear on reload, and are not stored or fixed on-chain. Creating an escrow does not submit an Oracle request. Each request requires 0.1 LINK in that escrow; successful submission does not guarantee fulfillment.
 - Older escrows may not expose the Oracle vote getter. An unavailable vote is shown as unknown, not treated as verified compatibility with revised voting behavior.
@@ -38,3 +38,15 @@ Uses an injected wallet on Sepolia and `src/contracts/contract-address.json`, `E
 Lint and production build passed after the interface changes. The existing bundle-size warning remains. Automated frontend tests, visual acceptance across viewport sizes, and real-wallet account-selection/revocation checks are still pending; a headless-browser attempt did not produce usable verification output.
 
 See the [roadmap](../docs/roadmap.md) for component extraction, tests, and remaining accessibility/visual checks.
+
+### Light and dark themes
+
+The header offers a translated light/dark theme selector. Dark is the default; the preference is saved locally and restored before the app renders. Changing theme preserves wallet, language, and form state. Browser visual and wallet interaction checks remain pending.
+
+### Mobile wallet connection
+
+Use the mobile/QR button for WalletConnect, or an injected wallet in its in-app browser. Configure `VITE_WALLETCONNECT_PROJECT_ID` using `frontend/.env.example` (copy to `.env.local` in the frontend directory) and restart Vite. No secrets or private keys belong in frontend variables. WalletConnect code is lazy-loaded. Real-device acceptance remains pending. See the [feature inventory](../docs/features.md) for setup, limitations, and test steps.
+
+### Connection and disconnection status
+
+Connection feedback distinguishes wallet preparation, QR/account approval, network checks, and account verification. Dashboard reads use independent Sepolia JSON-RPC, not the wallet relay; wallet connection does not certify successful data loading or continuous phone availability. Disconnect clears local state immediately, then attempts remote cleanup for up to 10 seconds. Timeout, unsupported revocation, and other cleanup failures appear as separate notices, not local-disconnect failures. See the feature inventory for real-device acceptance steps.

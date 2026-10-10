@@ -63,3 +63,8 @@ Account changes reconnect without a page refresh; network changes reset the sess
 | Bundle warning | Build succeeds; splitting is future work |
 
 Never paste keys, recovery phrases, `.env`, or RPC credentials into issues.
+## Mobile/QR configuration and network diagnostics
+
+From the repository root, copy `frontend/.env.example` to `frontend/.env.local`. Set `VITE_WALLETCONNECT_PROJECT_ID` and optionally `VITE_SEPOLIA_RPC_URL`, then restart Vite. These values are bundled into public frontend code: never use private keys or credential-bearing RPC URLs. Restrict permitted origins in the project dashboard before public deployment.
+
+Ordinary mobile browsers use the mobile/QR path; wallet in-app browsers may provide an injected wallet. Test HTTPS deployments and actual target devices. Dashboard RPC connectivity and WalletConnect relay connectivity are independent; successful connection on one device does not establish connectivity on another. Delay advisories identify a slow step, not its cause. Local disconnect can succeed even when remote cleanup cannot be confirmed.

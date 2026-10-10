@@ -25,6 +25,10 @@ and further integration are paused pending access/scope decisions.
 
 ## Phase 3: maintainability
 
+- [x] Add persisted light/dark appearance selection (visual acceptance pending).
+- [x] Implement mobile/QR WalletConnect, staged connection feedback, independent RPC reads, and differentiated disconnect notices (cross-device acceptance pending).
+- [ ] Consolidate appearance in one dropdown; retain current palette and add previous navy/blue palette with light/dark variants.
+
 - [x] Add Persian/English selection, persistent language preference, and RTL/LTR direction switching.
 
 - [x] Implement responsive RTL workspace and smaller-screen project cards (visual acceptance pending).

@@ -5,6 +5,7 @@ import EscrowJSON from './contracts/TrustEscrow.json';
 import AddressJSON from './contracts/contract-address.json';
 import { LanguageProvider } from './i18n.jsx';
 import { useLanguage } from './useLanguage.js';
+import { getReadProvider, withTimeout } from './network.js';
 import './App.css';
 
 function OracleInputs({ settings, onChange, prefix, disabled = false }) {
@@ -27,6 +28,15 @@ function OracleInputs({ settings, onChange, prefix, disabled = false }) {
 
 function App() {
   const { language, setLanguage, t, locale } = useLanguage();
+  const [theme, setTheme] = useState(() => {
+    try { return localStorage.getItem('trustdapp.theme') === 'light' ? 'light' : 'dark'; }
+    catch { return 'dark'; }
+  });
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try { localStorage.setItem('trustdapp.theme', theme); }
+    catch { /* Theme selection works even when browser storage is disabled. */ }
+  }, [theme]);
   const [account, setAccount] = useState(null);
   const [factoryContract, setFactoryContract] = useState(null);
   const [escrows, setEscrows] = useState([]);
@@ -46,11 +56,26 @@ function App() {
   const [oracleSettings, setOracleSettings] = useState({});
   const [oracleMessages, setOracleMessages] = useState({});
 
+  const walletRef = useRef(null);
+  const [walletProvider, setWalletProvider] = useState(null);
   const session = useRef(0);
   const connected = useRef(false);
   const connecting = useRef(false);
   const [walletBusy, setWalletBusy] = useState(false);
+  const [walletStage, setWalletStage] = useState('');
+  const [delayedStage, setDelayedStage] = useState('');
+  const changeWalletStage = useCallback((stage) => {
+    setDelayedStage('');
+    setWalletStage(stage);
+  }, []);
+  const [readProgress, setReadProgress] = useState(null);
+  useEffect(() => {
+    if (!walletStage) return;
+    const timer = setTimeout(() => setDelayedStage(walletStage), 20000);
+    return () => clearTimeout(timer);
+  }, [walletStage]);
   const [walletError, setWalletError] = useState('');
+  const [walletNotice, setWalletNotice] = useState('');
 
   const resetWallet = useCallback(() => {
     session.current++;
@@ -64,6 +89,8 @@ function App() {
     setTransaction(null);
     setReadError('');
     setReadBusy(false);
+    setReadProgress(null);
+    changeWalletStage('');
     setSearch('');
     setStatusFilter('all');
     setNewContractor('');
@@ -71,17 +98,22 @@ function App() {
     setNewBudget('');
     setIsOracleMode(false);
     setOracleDefaults({ url: '', path: 'status' });
-  }, []);
+  }, [changeWalletStage]);
 
-  const fetchEscrows = useCallback(async (factoryIns, provider) => {
+  const fetchEscrows = useCallback(async () => {
+    const provider = getReadProvider();
+    const factoryIns = new ethers.Contract(AddressJSON.EscrowFactory, FactoryJSON.abi, provider);
     const generation = session.current;
     setReadBusy(true);
     setReadError('');
+    setReadProgress(null);
     try {
-      const addresses = await factoryIns.getAllEscrows();
+      const addresses = await withTimeout(factoryIns.getAllEscrows(), 20000);
       const allEscrowData = [];
+      if (generation === session.current) setReadProgress({ done: 0, total: addresses.length });
 
       for (let address of addresses) {
+        if (generation !== session.current) return;
         const escrowContract = new ethers.Contract(address, EscrowJSON.abi, provider);
 
         const employer = await escrowContract.employer();
@@ -117,6 +149,7 @@ function App() {
           oracleDecision,
           signatures: { empRel, conRel, arbRel, empRef, conRef, arbRef }
         });
+        if (generation === session.current) setReadProgress({ done: allEscrowData.length, total: addresses.length });
       }
       if (connected.current && generation === session.current) setEscrows(allEscrowData);
     } catch (error) {
@@ -129,7 +162,8 @@ function App() {
 
   const initializeWallet = useCallback(async (address) => {
     const generation = session.current;
-    const provider = new ethers.BrowserProvider(window.ethereum);
+    const provider = new ethers.BrowserProvider(walletRef.current);
+    changeWalletStage("بررسی حساب انتخاب‌شده…");
     const signer = await provider.getSigner(address);
     const signerAddress = await signer.getAddress();
     if (generation !== session.current) return;
@@ -137,11 +171,12 @@ function App() {
     connected.current = true;
     setAccount(signerAddress);
     setFactoryContract(factory);
-    await fetchEscrows(factory, provider);
-  }, [fetchEscrows]);
+    changeWalletStage('');
+    void fetchEscrows();
+  }, [fetchEscrows, changeWalletStage]);
 
   useEffect(() => {
-    const wallet = window.ethereum;
+    const wallet = walletProvider;
     if (!wallet?.on) return;
     const onAccounts = async (accounts) => {
       if (connecting.current || !connected.current) return;
@@ -162,50 +197,90 @@ function App() {
     };
     wallet.on('accountsChanged', onAccounts);
     wallet.on('chainChanged', onChain);
-    wallet.on('disconnect', resetWallet);
+    const onDisconnect = () => { if (walletRef.current === wallet) resetWallet(); };
+    wallet.on('disconnect', onDisconnect);
     return () => {
       wallet.removeListener('accountsChanged', onAccounts);
       wallet.removeListener('chainChanged', onChain);
-      wallet.removeListener('disconnect', resetWallet);
+      wallet.removeListener('disconnect', onDisconnect);
     };
-  }, [initializeWallet, resetWallet]);
+  }, [initializeWallet, resetWallet, walletProvider]);
 
-  const connectWallet = async (chooseAccount = false) => {
+  const connectWallet = async (chooseAccount = false, mobile = false) => {
     if (connecting.current) return;
-    if (!window.ethereum) {
-      setWalletError("کیف پول نصب نیست یا در دسترس نیست.");
-      return;
-    }
     connecting.current = true;
     setWalletBusy(true);
     setWalletError('');
+    setWalletNotice('');
     resetWallet();
     try {
-      if (chooseAccount) {
-        await window.ethereum.request({ method: 'wallet_requestPermissions', params: [{ eth_accounts: {} }] });
+      const useMobile = mobile || !window.ethereum || Boolean(walletRef.current?.isWalletConnect);
+      let wallet;
+      if (useMobile) {
+        changeWalletStage("آماده‌سازی ارتباط WalletConnect…");
+        const { getMobileWallet } = await import('./walletConnect.js');
+        wallet = await getMobileWallet();
+        if (wallet.session && chooseAccount) {
+          changeWalletStage("در حال قطع اتصال کیف پول…");
+          await withTimeout(wallet.disconnect(), 10000);
+        }
+        if (wallet.session) changeWalletStage("استفاده از نشست قبلی کیف پول؛ تأیید جدید درخواست نشده است.");
+        if (!wallet.session) {
+          changeWalletStage("منتظر اسکن QR و تأیید اتصال در کیف پول…");
+          await wallet.connect();
+        }
+      } else {
+        wallet = window.ethereum;
       }
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0xaa36a7' }] });
+      walletRef.current = wallet;
+      setWalletProvider(wallet);
+      changeWalletStage("منتظر انتخاب یا تأیید حساب در کیف پول…");
+      if (chooseAccount && !useMobile) {
+        await wallet.request({ method: 'wallet_requestPermissions', params: [{ eth_accounts: {} }] });
+      }
+      const accounts = await walletRef.current.request({ method: 'eth_requestAccounts' });
+      changeWalletStage("بررسی شبکهٔ کیف پول…");
+      const chainId = await wallet.request({ method: 'eth_chainId' });
+      if (Number(chainId) !== 11155111) {
+        changeWalletStage("منتظر تأیید تغییر شبکه به Sepolia…");
+        await wallet.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0xaa36a7' }] });
+      }
       if (!accounts.length) throw new Error('No account selected');
       await initializeWallet(accounts[0]);
     } catch (error) {
       resetWallet();
-      setWalletError(error.code === 4001 ? "درخواست اتصال یا انتخاب حساب رد شد." : error.code === -32002 ? "یک درخواست در کیف پول باز است؛ آن را تکمیل کنید." : "اتصال ناموفق بود. حساب موردنظر را در کیف پول انتخاب کنید و دوباره تلاش کنید.");
+      setWalletError(error.message === 'WalletConnect project ID missing' ? "شناسهٔ WalletConnect تنظیم نشده است." : error.code === 4001 ? "درخواست اتصال یا انتخاب حساب رد شد." : error.code === -32002 ? "یک درخواست در کیف پول باز است؛ آن را تکمیل کنید." : "اتصال ناموفق بود. حساب موردنظر را در کیف پول انتخاب کنید و دوباره تلاش کنید.");
     } finally {
       connecting.current = false;
+      changeWalletStage('');
       setWalletBusy(false);
     }
   };
 
   const disconnectWallet = async () => {
+    const wallet = walletRef.current;
+    walletRef.current = null;
+    setWalletProvider(null);
     resetWallet();
     setWalletError('');
+    setWalletNotice('');
     setWalletBusy(true);
+    changeWalletStage("اتصال محلی قطع شد؛ در حال پایان‌دادن به نشست کیف پول…");
     try {
-      await window.ethereum.request({ method: 'wallet_revokePermissions', params: [{ eth_accounts: {} }] });
-    } catch {
-      setWalletError("اتصال برنامه قطع شد؛ کیف پول لغو مجوز را نپذیرفت. مجوز سایت ممکن است در کیف پول باقی مانده باشد.");
+      if (wallet?.isWalletConnect) await withTimeout(wallet.disconnect(), 10000);
+      else if (wallet) await withTimeout(wallet.request({ method: 'wallet_revokePermissions', params: [{ eth_accounts: {} }] }), 10000);
+    } catch (error) {
+      const code = error.code ?? error.data?.originalError?.code;
+      console.warn('Wallet disconnect cleanup not confirmed', { transport: wallet?.isWalletConnect ? 'WalletConnect' : 'injected', code, message: error.message });
+      if (error.message === 'Operation timed out') {
+        setWalletNotice('از برنامه خارج شدید. پایان نشست کیف پول در زمان مقرر تأیید نشد؛ اگر اتصال سایت در کیف پول باقی است، آن را از همان‌جا حذف کنید.');
+      } else if ([4200, -32601].includes(code)) {
+        setWalletNotice('از برنامه خارج شدید. این کیف پول لغو مجوز از داخل برنامه را پشتیبانی نمی‌کند؛ مجوز سایت را در تنظیمات کیف پول حذف کنید.');
+      } else {
+        setWalletNotice('از برنامه خارج شدید. پاک‌سازی نشست یا مجوز کیف پول با خطا روبه‌رو شد؛ اتصال سایت را در کیف پول بررسی کنید.');
+      }
     } finally {
+      changeWalletStage('');
       setWalletBusy(false);
     }
   };
@@ -249,8 +324,7 @@ function App() {
           } catch { /* Ignore logs from other contracts. */ }
         }
       }
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      fetchEscrows(factoryContract, provider);
+      fetchEscrows();
 
       setNewContractor(''); setNewArbiter(''); setNewBudget(''); setIsOracleMode(false);
     } catch (error) {
@@ -286,7 +360,7 @@ function App() {
     }
     try {
       setLoading(true);
-      const provider = new ethers.BrowserProvider(window.ethereum);
+      const provider = new ethers.BrowserProvider(walletRef.current);
       const signer = await provider.getSigner();
       const contract = new ethers.Contract(escrow.address, EscrowJSON.abi, signer);
       report("منتظر تأیید کیف پول…");
@@ -294,7 +368,7 @@ function App() {
       report(`در انتظار ثبت تراکنش: ${tx.hash}`);
       await tx.wait();
       report(`درخواست ثبت شد؛ دریافت پاسخ هنوز تأیید نشده است. برای بررسی، وضعیت را تازه کنید. تراکنش: ${tx.hash}`);
-      await fetchEscrows(factoryContract, provider);
+      await fetchEscrows();
     } catch (error) {
       report(error.code === 'ACTION_REJECTED' ? "تراکنش توسط شما رد شد." : `ارسال ناموفق: ${error.reason || error.shortMessage || error.message}`);
     } finally {
@@ -306,7 +380,7 @@ function App() {
     try {
       setLoading(true);
       setTransaction({ stage: 'pending', message: 'منتظر تأیید کیف پول…' });
-      const provider = new ethers.BrowserProvider(window.ethereum);
+      const provider = new ethers.BrowserProvider(walletRef.current);
       const signer = await provider.getSigner();
       const escrowContract = new ethers.Contract(escrowAddress, EscrowJSON.abi, signer);
 
@@ -317,7 +391,7 @@ function App() {
       setTransaction({ stage: 'pending', message: 'تراکنش ارسال شد؛ منتظر تأیید شبکه…', hash: tx.hash });
       await tx.wait();
       setTransaction({ stage: 'success', message: 'رأی شما در شبکه ثبت شد.', hash: tx.hash });
-      await fetchEscrows(factoryContract, provider);
+      await fetchEscrows();
     } catch (error) {
       console.error("Action Error:", error);
       setTransaction({ stage: 'error', message: error.code === 'ACTION_REJECTED' ? 'تراکنش توسط شما رد شد.' : `ارسال ناموفق: ${error.reason || error.shortMessage || error.message}` });
@@ -378,20 +452,28 @@ function App() {
             <option value="en">English</option>
           </select>
         </label>
+        <label className="theme-control">
+          <span>{t("ظاهر")}</span>
+          <select aria-label={t("ظاهر")} value={theme} onChange={event => setTheme(event.target.value)}>
+            <option value="dark">{t("تاریک")}</option>
+            <option value="light">{t("روشن")}</option>
+          </select>
+        </label>
         {account ? (
           <div className="wallet-controls">
             <a className="wallet-btn connected" href={`https://sepolia.etherscan.io/address/${account}`} target="_blank" rel="noopener noreferrer" title={t("مشاهده کیف پول در اتر‌اسکن")}><span className="connection-dot" aria-hidden="true" />{t("متصل: ")}<bdi title={account}>{formatAddress(account)}</bdi></a>
-            <button className="wallet-btn" disabled={loading || walletBusy} onClick={() => connectWallet(true)}>{t("انتخاب حساب دیگر")}</button>
+            <button className="wallet-btn" disabled={loading || walletBusy} onClick={() => connectWallet(true)}>{t("تغییر حساب")}</button>
             <button className="wallet-btn wallet-disconnect" disabled={loading || walletBusy} onClick={disconnectWallet}>{t("قطع اتصال")}</button>
           </div>
         ) : (
           <div className="wallet-controls">
             <button className="wallet-btn" disabled={walletBusy || loading} onClick={() => connectWallet()}>{t("اتصال به کیف پول")}</button>
-            <button className="wallet-btn" disabled={walletBusy || loading} onClick={() => connectWallet(true)}>{t("اتصال با حساب دیگر")}</button>
+            <button className="wallet-btn" disabled={walletBusy || loading} onClick={() => connectWallet(false, true)}>{t("اتصال موبایل / QR")}</button>
           </div>
         )}
       </header>
-      {walletBusy && <p role="status">{t("منتظر پاسخ کیف پول…")}</p>}
+      {walletStage && <div className="connection-status" role="status" aria-live="polite"><strong>{t(walletStage)}</strong>{delayedStage === walletStage && <p>{t("این مرحله طولانی شده است؛ درخواست کیف پول و اتصال اینترنت هر دو دستگاه را بررسی کنید. علت ممکن است شبکه، VPN یا انتظار تأیید باشد؛ هنوز خطای قطعی ثبت نشده است.")}</p>}</div>}
+      {walletNotice && <p className="wallet-notice" role="status">{t(walletNotice)}</p>}
       {walletError && <p className="wallet-error" role="alert">{t(walletError)}</p>}
 
       <div className="network-strip"><span className="network-label">{t("شبکهٔ آزمایشی ")}<bdi>Sepolia</bdi></span><a href={`https://sepolia.etherscan.io/address/${AddressJSON.EscrowFactory}`} target="_blank" rel="noopener noreferrer">{t("مشاهدهٔ کارخانهٔ قراردادها ↗")}</a><span>{t("توکن TRUST مستقل از این برنامه است")}</span></div>
@@ -450,12 +532,12 @@ function App() {
 
           <section className="card projects-card">
             <h2 className="card-title">{t("داشبورد پروژه‌ها")}</h2><p className="section-description">{t("جزئیات قرارداد، رأی‌ها و عملیات؛ همهٔ قراردادهای کارخانه نمایش داده می‌شوند.")}</p>
-            <button className="btn-action btn-oracle" disabled={loading || readBusy} onClick={() => fetchEscrows(factoryContract, new ethers.BrowserProvider(window.ethereum))}>{t("تازه‌سازی وضعیت")}</button>
+            <button className="btn-action btn-oracle" disabled={loading || readBusy} onClick={() => fetchEscrows()}>{t("تازه‌سازی وضعیت")}</button>
             <div className="project-toolbar">
               <label className="search-control"><span>{t("جست‌وجوی آدرس")}</span><input className="input-field" type="search" placeholder="0x…" value={search} onChange={event => setSearch(event.target.value)} /></label>
               <label className="filter-control"><span>{t("وضعیت")}</span><select value={statusFilter} onChange={event => setStatusFilter(event.target.value)}><option value="all">{t("همهٔ وضعیت‌ها")}</option><option value="0">{t("در جریان")}</option><option value="1">{t("تسویه شده")}</option><option value="2">{t("لغو شده")}</option></select></label>
             </div>
-            {readBusy && <p className="read-status" role="status">{t("در حال خواندن اطلاعات شبکه…")}</p>}
+            {readBusy && <p className="read-status" role="status">{t("در حال خواندن اطلاعات شبکه…")} {readProgress && <bdi>{readProgress.done.toLocaleString(locale)} / {readProgress.total.toLocaleString(locale)}</bdi>}</p>}
             {readError && <p className="wallet-error" role="alert">{t(readError)}</p>}
             <div className="table-wrapper" aria-busy={readBusy}>
               <table className="escrow-table"><caption className="sr-only">{t("جزئیات قرارداد، رأی‌ها و عملیات؛ همهٔ قراردادهای کارخانه نمایش داده می‌شوند.")}</caption>
